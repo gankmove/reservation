@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Stella Marina</title>
+  <title>Réservation Restaurant</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
     h1, h2 { text-align: center; }
@@ -24,9 +24,9 @@
 <body>
   <h1>Stella Marina</h1>
   <nav>
-    <button onclick="showTab('form')" class="active">Réserver</button>
-    <button onclick="showTab('liste')">Réservations</button>
-    <button onclick="showTab('clients')">Fiches clients</button>
+    <button onclick="showTab('form', event)" class="active">Réserver</button>
+    <button onclick="showTab('liste', event)">Réservations</button>
+    <button onclick="showTab('clients', event)">Fiches clients</button>
   </nav>
 
   <section id="form" class="active">
@@ -67,19 +67,20 @@
   <script>
     const tabs = document.querySelectorAll("nav button");
     const sections = document.querySelectorAll("section");
-    const form = document.getElementById('reservationForm');
-    const confirmation = document.getElementById('confirmation');
-    const success = document.getElementById('success');
-    let reservations = [];
+    let reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
 
-    function showTab(id) {
-      sections.forEach(sec => sec.classList.remove("active"));
-      document.getElementById(id).classList.add("active");
-      tabs.forEach(btn => btn.classList.remove("active"));
-      event.target.classList.add("active");
+    function showTab(id, event) {
+  sections.forEach(sec => sec.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
+  tabs.forEach(btn => btn.classList.remove("active"));
+  if (event) event.target.classList.add("active");
       if (id === "liste") renderReservations();
       if (id === "clients") renderClients();
     }
+
+    const form = document.getElementById('reservationForm');
+    const confirmation = document.getElementById('confirmation');
+    const success = document.getElementById('success');
 
     form.addEventListener('submit', function(e) {
       e.preventDefault();
@@ -93,35 +94,32 @@
       confirmation.classList.remove('hidden');
 
       document.getElementById('confirm').onclick = async () => {
-        data.timestamp = new Date().toISOString();
-        const editingId = form.dataset.editingId;
-        try {
-          const url = editingId
-            ? `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${editingId}`
-            : `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients`;
-          const method = editingId ? "PUT" : "POST";
+  data.timestamp = new Date().toISOString();
+  const editingId = form.dataset.editingId;
+  try {
+    const url = editingId ? `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${editingId}` : "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
+    const method = editingId ? "PUT" : "POST";
 
-          const response = await fetch(url, {
-            method,
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ fichesclient: data })
-          });
+    const response = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fichesclient: data })
+    });
 
-          const result = await response.json();
-          if (response.ok) {
-            form.reset();
-            confirmation.classList.add('hidden');
-            success.classList.remove('hidden');
-            form.removeAttribute("data-editing-id");
-            setTimeout(() => success.classList.add('hidden'), 4000);
-            await loadReservations(); // recharge après ajout/modif
-          } else {
-            alert("Erreur serveur : " + JSON.stringify(result));
-          }
-        } catch (error) {
-          alert("Erreur réseau : " + error.message);
-        }
-      };
+    const result = await response.json();
+    if (response.ok) {
+      form.reset();
+      confirmation.classList.add('hidden');
+      success.classList.remove('hidden');
+      form.removeAttribute("data-editing-id");
+      setTimeout(() => success.classList.add('hidden'), 4000);
+    } else {
+      alert("Erreur serveur : " + JSON.stringify(result));
+    }
+  } catch (error) {
+    alert("Erreur réseau : " + error.message);
+  }
+};
 
       document.getElementById('cancel').onclick = () => {
         confirmation.classList.add('hidden');
@@ -169,48 +167,60 @@
     }
 
     function editReservation(index) {
-      const r = reservations[index];
-      for (const key in r) {
-        const field = form.elements.namedItem(key);
-        if (field) field.value = r[key];
-      }
-      form.dataset.editingId = r.id;
-      showTab('form');
+  const r = reservations[index];
+  for (const key in r) {
+    const field = form.elements.namedItem(key);
+    if (field) field.value = r[key];
+  }
+  showTab('form');
+  reservations.splice(index, 1);
+  localStorage.setItem("reservations", JSON.stringify(reservations));
+  renderReservations();
+  renderClients();
+  form.dataset.editingId = r.id || "";
+}
+  showTab('form');
+  reservations.splice(index, 1);
+  localStorage.setItem("reservations", JSON.stringify(reservations));
+  renderReservations();
+  renderClients();
+}
     }
 
     async function deleteReservation(index) {
-      if (confirm("Confirmer la suppression ?")) {
-        const deleted = reservations.splice(index, 1)[0];
-        renderReservations();
-        renderClients();
-        try {
-          await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${deleted.id}`, {
-            method: "DELETE"
-          });
-          await loadReservations();
-        } catch (err) {
-          console.error("Erreur lors de la suppression sur Sheety :", err);
-        }
+  if (confirm("Confirmer la suppression ?")) {
+    const deleted = reservations.splice(index, 1)[0];
+    localStorage.setItem("reservations", JSON.stringify(reservations));
+    renderReservations();
+    renderClients();
+    if (deleted.id) {
+      try {
+        await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${deleted.id}`, {
+          method: "DELETE"
+        });
+      } catch (err) {
+        console.error("Erreur lors de la suppression sur Sheety :", err);
       }
     }
-
-    async function loadReservations() {
-      try {
-        const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients");
-        const result = await res.json();
-        if (result && result.fichesclients) {
-          reservations = result.fichesclients;
-        }
-        renderReservations();
-        renderClients();
-      } catch (e) {
-        console.error("Erreur de chargement depuis Sheety :", e);
-      }
+  }
+}
     }
 
     document.getElementById('searchClient').addEventListener('input', renderClients);
-
-    window.addEventListener('DOMContentLoaded', loadReservations);
+    window.addEventListener('DOMContentLoaded', async () => {
+  try {
+    const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients");
+    const result = await res.json();
+    if (result && result.fichesclients) {
+      reservations = result.fichesclients;
+      localStorage.setItem("reservations", JSON.stringify(reservations));
+    }
+  } catch (e) {
+    console.error("Erreur de chargement depuis Sheety :", e);
+  }
+  renderReservations();
+  renderClients();
+});
   </script>
 </body>
 </html>
