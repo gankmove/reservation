@@ -52,7 +52,7 @@
     <h2>Réservations à venir</h2>
     <table>
       <thead>
-        <tr><th>Nom</th><th>Heure</th><th>Personnes</th><th>Table</th></tr>
+        <tr><th>Nom</th><th>Téléphone</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
       </thead>
       <tbody id="reservationTable"></tbody>
     </table>
@@ -67,7 +67,7 @@
   <script>
     const tabs = document.querySelectorAll("nav button");
     const sections = document.querySelectorAll("section");
-    const reservations = [];
+    let reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
 
     function showTab(id) {
       sections.forEach(sec => sec.classList.remove("active"));
@@ -96,6 +96,7 @@
       document.getElementById('confirm').onclick = async () => {
         data.timestamp = new Date().toISOString();
         reservations.push(data);
+        localStorage.setItem("reservations", JSON.stringify(reservations));
         try {
           const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
             method: "POST",
@@ -125,8 +126,18 @@
     function renderReservations() {
       const tbody = document.getElementById('reservationTable');
       tbody.innerHTML = "";
-      reservations.forEach(r => {
-        const row = `<tr><td>${r.nom} ${r.prenom}</td><td>${r.heure}</td><td>${r.nombre}</td><td>${r.table}</td></tr>`;
+      reservations.forEach((r, i) => {
+        const row = `<tr>
+          <td>${r.nom} ${r.prenom}</td>
+          <td>${r.telephone}</td>
+          <td>${r.heure}</td>
+          <td>${r.nombre}</td>
+          <td>${r.table}</td>
+          <td>
+            <button onclick="editReservation(${i})">Modifier</button>
+            <button onclick="deleteReservation(${i})">Supprimer</button>
+          </td>
+        </tr>`;
         tbody.innerHTML += row;
       });
     }
@@ -139,18 +150,43 @@
         container.innerHTML = '<p>Aucun client trouvé.</p>';
         return;
       }
-      container.innerHTML = filtered.map(r => `
+      container.innerHTML = filtered.map((r, i) => `
         <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
           <strong>${r.prenom} ${r.nom}</strong><br>
           Tel: ${r.telephone}<br>
           Email: ${r.email || '—'}<br>
           Pour ${r.nombre} personnes à ${r.heure} (Table ${r.table})<br>
           Allergènes : ${r.allergenes || 'Aucun'}<br>
-          Remarques : ${r.remarques || '—'}
+          Remarques : ${r.remarques || '—'}<br>
+          <button onclick="editReservation(${i})">Modifier</button>
+          <button onclick="deleteReservation(${i})">Supprimer</button>
         </div>`).join('');
     }
 
+    function editReservation(index) {
+      const r = reservations[index];
+      for (const key in r) {
+        const field = form.elements.namedItem(key);
+        if (field) field.value = r[key];
+      }
+      showTab('form');
+      deleteReservation(index);
+    }
+
+    function deleteReservation(index) {
+      if (confirm("Confirmer la suppression ?")) {
+        reservations.splice(index, 1);
+        localStorage.setItem("reservations", JSON.stringify(reservations));
+        renderReservations();
+        renderClients();
+      }
+    }
+
     document.getElementById('searchClient').addEventListener('input', renderClients);
+    window.addEventListener('DOMContentLoaded', () => {
+      renderReservations();
+      renderClients();
+    });
   </script>
 </body>
 </html>
