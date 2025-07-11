@@ -97,17 +97,23 @@
         data.timestamp = new Date().toISOString();
         reservations.push(data);
         try {
-          await fetch("https://script.google.com/macros/s/AKfycbxFxCV7QdcZz9n3Ty-yzo4df-JogbrJY5gGWvEcjeXKvhYLG8aW1VkEVkyEPIp6nOATqQ/exec", {
+          const response = await fetch("https://script.google.com/macros/s/AKfycbxFxCV7QdcZz9n3Ty-yzo4df-JogbrJY5gGWvEcjeXKvhYLG8aW1VkEVkyEPIp6nOATqQ/exec", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
           });
-          form.reset();
-          confirmation.classList.add('hidden');
-          success.classList.remove('hidden');
-          setTimeout(() => success.classList.add('hidden'), 4000);
+
+          const text = await response.text();
+          if (response.ok && text.includes("Success")) {
+            form.reset();
+            confirmation.classList.add('hidden');
+            success.classList.remove('hidden');
+            setTimeout(() => success.classList.add('hidden'), 4000);
+          } else {
+            alert("Erreur serveur : " + text);
+          }
         } catch (error) {
-          alert("Erreur lors de l'enregistrement. Veuillez réessayer.");
+          alert("Erreur réseau : " + error.message);
         }
       };
 
