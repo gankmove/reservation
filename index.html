@@ -172,19 +172,10 @@
     const field = form.elements.namedItem(key);
     if (field) field.value = r[key];
   }
-  showTab('form');
-  reservations.splice(index, 1);
-  localStorage.setItem("reservations", JSON.stringify(reservations));
-  renderReservations();
-  renderClients();
   form.dataset.editingId = r.id || "";
-}
   showTab('form');
-  reservations.splice(index, 1);
-  localStorage.setItem("reservations", JSON.stringify(reservations));
-  renderReservations();
-  renderClients();
 }
+  
     }
 
     async function deleteReservation(index) {
