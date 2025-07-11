@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Réservation Restaurant</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
+    h1, h2 { text-align: center; }
+    nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
+    nav button { padding: 10px; border: none; background: #eee; cursor: pointer; }
+    nav button.active { background: black; color: white; }
+    section { display: none; }
+    section.active { display: block; }
+    label { display: block; margin-top: 10px; font-weight: bold; }
+    input, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
+    button.submit { margin-top: 20px; padding: 10px 20px; background-color: black; color: white; border: none; cursor: pointer; }
+    .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+  <h1>Réservations Restaurant</h1>
+  <nav>
+    <button onclick="showTab('form')" class="active">Réserver</button>
+    <button onclick="showTab('liste')">Réservations</button>
+    <button onclick="showTab('clients')">Fiches clients</button>
+  </nav>
+
+  <section id="form" class="active">
+    <h2>Formulaire de réservation</h2>
+    <form id="reservationForm">
+      <label>Nom* <input type="text" name="nom" required></label>
+      <label>Prénom* <input type="text" name="prenom" required></label>
+      <label>Téléphone* <input type="tel" name="telephone" required></label>
+      <label>Email <input type="email" name="email"></label>
+      <label>Date de naissance <input type="date" name="dob"></label>
+      <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
+      <label>Heure de réservation* <input type="time" name="heure" required></label>
+      <label>Table attribuée* <input type="text" name="table" required></label>
+      <label>Allergènes <textarea name="allergenes"></textarea></label>
+      <label>Remarques <textarea name="remarques"></textarea></label>
+      <button type="submit" class="submit">Envoyer</button>
+    </form>
+    <div id="confirmation" class="confirmation hidden"></div>
+    <div id="success" class="success hidden" style="color:green;">✅ Réservation enregistrée avec succès !</div>
+  </section>
+
+  <section id="liste">
+    <h2>Réservations à venir</h2>
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Heure</th><th>Personnes</th><th>Table</th></tr>
+      </thead>
+      <tbody id="reservationTable"></tbody>
+    </table>
+  </section>
+
+  <section id="clients">
+    <h2>Fiches clients</h2>
+    <input type="text" id="searchClient" placeholder="Nom ou téléphone">
+    <div id="clientResults"></div>
+  </section>
+
+  <script>
+    const tabs = document.querySelectorAll("nav button");
+    const sections = document.querySelectorAll("section");
+    const reservations = [];
+
+    function showTab(id) {
+      sections.forEach(sec => sec.classList.remove("active"));
+      document.getElementById(id).classList.add("active");
+      tabs.forEach(btn => btn.classList.remove("active"));
+      event.target.classList.add("active");
+      if (id === "liste") renderReservations();
+      if (id === "clients") renderClients();
+    }
+
+    const form = document.getElementById('reservationForm');
+    const confirmation = document.getElementById('confirmation');
+    const success = document.getElementById('success');
+
+    form.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const data = Object.fromEntries(new FormData(form).entries());
+      let recap = '<h3>Confirmer votre réservation :</h3><ul>';
+      for (const [key, value] of Object.entries(data)) {
+        recap += `<li><strong>${key} :</strong> ${value || '—'}</li>`;
+      }
+      recap += '</ul><button id="confirm">Confirmer</button> <button id="cancel">Annuler</button>';
+      confirmation.innerHTML = recap;
+      confirmation.classList.remove('hidden');
+
+      document.getElementById('confirm').onclick = async () => {
+        data.timestamp = new Date().toISOString();
+        reservations.push(data);
+        try {
+          await fetch("https://script.google.com/macros/s/AKfycbxFxCV7QdcZz9n3Ty-yzo4df-JogbrJY5gGWvEcjeXKvhYLG8aW1VkEVkyEPIp6nOATqQ/exec", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+          });
+          form.reset();
+          confirmation.classList.add('hidden');
+          success.classList.remove('hidden');
+          setTimeout(() => success.classList.add('hidden'), 4000);
+        } catch (error) {
+          alert("Erreur lors de l'enregistrement. Veuillez réessayer.");
+        }
+      };
+
+      document.getElementById('cancel').onclick = () => {
+        confirmation.classList.add('hidden');
+      };
+    });
+
+    function renderReservations() {
+      const tbody = document.getElementById('reservationTable');
+      tbody.innerHTML = "";
+      reservations.forEach(r => {
+        const row = `<tr><td>${r.nom} ${r.prenom}</td><td>${r.heure}</td><td>${r.nombre}</td><td>${r.table}</td></tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function renderClients() {
+      const search = document.getElementById('searchClient').value.toLowerCase();
+      const container = document.getElementById('clientResults');
+      const filtered = reservations.filter(r => r.nom.toLowerCase().includes(search) || r.telephone.includes(search));
+      if (filtered.length === 0) {
+        container.innerHTML = '<p>Aucun client trouvé.</p>';
+        return;
+      }
+      container.innerHTML = filtered.map(r => `
+        <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
+          <strong>${r.prenom} ${r.nom}</strong><br>
+          Tel: ${r.telephone}<br>
+          Email: ${r.email || '—'}<br>
+          Pour ${r.nombre} personnes à ${r.heure} (Table ${r.table})<br>
+          Allergènes : ${r.allergenes || 'Aucun'}<br>
+          Remarques : ${r.remarques || '—'}
+        </div>`).join('');
+    }
+
+    document.getElementById('searchClient').addEventListener('input', renderClients);
+  </script>
+</body>
+</html>
