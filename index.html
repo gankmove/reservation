@@ -24,9 +24,9 @@
 <body>
   <h1>Stella Marina</h1>
   <nav>
-    <button onclick="showTab('form', event)" class="active">Réserver</button>
-    <button onclick="showTab('liste', event)">Réservations</button>
-    <button onclick="showTab('clients', event)">Fiches clients</button>
+    <button class="active">Réserver</button>
+    <button>Réservations</button>
+    <button>Fiches clients</button>
   </nav>
 
   <section id="form" class="active">
@@ -208,6 +208,12 @@
 
     document.getElementById('searchClient').addEventListener('input', renderClients);
     window.addEventListener('DOMContentLoaded', async () => {
+  tabs.forEach(btn => {
+    btn.addEventListener("click", function(event) {
+      const id = this.textContent.includes("Réserver") ? "form" : this.textContent.includes("Réservations") ? "liste" : "clients";
+      showTab(id, event);
+    });
+  });
   try {
     const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients");
     const result = await res.json();
