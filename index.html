@@ -97,20 +97,20 @@
         data.timestamp = new Date().toISOString();
         reservations.push(data);
         try {
-          const response = await fetch("https://script.google.com/macros/s/AKfycbxFxCV7QdcZz9n3Ty-yzo4df-JogbrJY5gGWvEcjeXKvhYLG8aW1VkEVkyEPIp6nOATqQ/exec", {
+          const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ reservation: data })
           });
 
-          const text = await response.text();
-          if (response.ok && text.includes("Success")) {
+          const result = await response.json();
+          if (response.ok) {
             form.reset();
             confirmation.classList.add('hidden');
             success.classList.remove('hidden');
             setTimeout(() => success.classList.add('hidden'), 4000);
           } else {
-            alert("Erreur serveur : " + text);
+            alert("Erreur serveur : " + JSON.stringify(result));
           }
         } catch (error) {
           alert("Erreur réseau : " + error.message);
