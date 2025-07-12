@@ -32,17 +32,24 @@
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
+      <fieldset style="border: 2px solid #cce5ff; background: #e9f5ff; padding: 15px; margin-bottom: 20px;">
+        <legend style="font-weight: bold; color: #007bff;">Informations du client</legend>
       <label>Nom* <input type="text" name="nom" required></label>
       <label>Prénom* <input type="text" name="prenom" required></label>
       <label>Téléphone* <input type="tel" name="telephone" required></label>
       <label>Email <input type="email" name="email"></label>
       <label>Date de naissance <input type="date" name="dob"></label>
-      <label>Date de réservation* <input type="date" name="date_reservation" required></label>
+      </fieldset>
+
+      <fieldset style="border: 2px solid #d4edda; background: #f3fdf4; padding: 15px;">
+        <legend style="font-weight: bold; color: #28a745;">Détails de la réservation</legend>
+        <label>Date de réservation* <input type="date" name="date_reservation" required></label>
       <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
       <label>Heure de réservation* <input type="time" name="heure" required></label>
       <label>Table attribuée* <input type="text" name="table" required></label>
       <label>Allergènes <textarea name="allergenes"></textarea></label>
       <label>Remarques <textarea name="remarques"></textarea></label>
+      </fieldset>
       <button type="submit" class="submit">Envoyer</button>
     </form>
     <div id="confirmation" class="confirmation hidden"></div>
