@@ -156,11 +156,15 @@ document.getElementById("reservationForm").addEventListener("submit", async (e) 
   document.getElementById("confirmation").innerHTML = `
     <p><strong>Confirmer la réservation pour :</strong></p>
     <ul>
-      <li>${data.prenom} ${data.nom}</li>
-      <li>Tél : ${data.telephone}</li>
-      <li>Date : ${data.date_reservation}</li>
+      <li>Nom : ${data.prenom} ${data.nom}</li>
+      <li>Téléphone : ${data.telephone}</li>
+      <li>Email : ${data.email || '—'}</li>
+      <li>Date de réservation : ${data.date_reservation}</li>
       <li>Heure : ${data.heure}</li>
+      <li>Nombre de personnes : ${data.nombre}</li>
       <li>Table : ${data.table}</li>
+      <li>Allergènes : ${data.allergenes || '—'}</li>
+      <li>Remarques : ${data.remarques || '—'}</li>
     </ul>
     <button id="confirmerBtn">Confirmer</button>
   `;
@@ -168,16 +172,7 @@ document.getElementById("reservationForm").addEventListener("submit", async (e) 
   document.getElementById("confirmerBtn").addEventListener("click", async () => {
     try {
       await saveReservationToSheet(data);
-
-      const clients = getFromLocalStorage("clients");
-      const existing = clients.find(c => c.telephone === client.telephone);
-      if (!existing) {
-        await saveClientToSheet(client);
-        clients.push(client);
-      } else {
-        existing.reservations++;
-      }
-      saveToLocalStorage("clients", clients);
+      await saveOrUpdateClient(client);
 
       document.getElementById("confirmation").classList.add("hidden");
       document.getElementById("success").classList.remove("hidden");
