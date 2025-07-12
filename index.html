@@ -223,6 +223,7 @@ let clients = JSON.parse(localStorage.getItem("clients") || "[]");
     return;
   }
   container.innerHTML = filtered.map((r, i) => `
+      container.innerHTML = filtered.map((r, i) => `
     <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
       <strong>${r.prenom} ${r.nom}</strong><br>
       Tel: ${r.telephone}<br>
@@ -230,25 +231,7 @@ let clients = JSON.parse(localStorage.getItem("clients") || "[]");
       Réservations : ${r.reservations || 0}<br>
       <button onclick="editClient(${i})">Modifier</button>
       <button onclick="deleteReservation(${i})">Supprimer</button>
-    });
-
-function editClient(index) {
-  const clients = JSON.parse(localStorage.getItem("clients") || "[]");
-  const c = clients[index];
-  if (!c) return;
-  const fieldsToFill = ["nom", "prenom", "telephone", "email", "dob", "allergenes", "remarques"];
-  fieldsToFill.forEach(key => {
-    const field = form.elements.namedItem(key);
-    if (field) field.value = c[key] || "";
-  });
-  const resetFields = ["date_reservation", "nombre", "heure", "table"];
-  resetFields.forEach(key => {
-    const field = form.elements.namedItem(key);
-    if (field) field.value = "";
-  });
-  form.dataset.editClientId = index; // pour mise à jour
-  showTab('form');
-</div>`).join('');
+    </div>`).join('');
     }
 
     function editReservation(index) {
