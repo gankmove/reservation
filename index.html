@@ -73,6 +73,7 @@
   </section>
 
   <script>
+    let currentReservationId = null;
     const tabs = document.querySelectorAll("nav button");
     const sections = document.querySelectorAll("section");
 
@@ -162,13 +163,22 @@
 
       document.getElementById("confirmerBtn").addEventListener("click", async () => {
         try {
-          await saveReservationToSheet(data);
+          if (currentReservationId) {
+            await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${currentReservationId}`, {
+              method: "PUT",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reservation: data })
+            });
+          } else {
+            await saveReservationToSheet(data);
+          }
           await saveOrUpdateClient(client);
 
           document.getElementById("confirmation").classList.add("hidden");
           document.getElementById("success").classList.remove("hidden");
           document.getElementById("success").textContent = "Réservation enregistrée avec succès.";
           form.reset();
+          currentReservationId = null;
         } catch (err) {
           alert("Erreur : " + err.message);
         }
@@ -211,6 +221,7 @@
         btn.addEventListener("click", async () => {
           const item = json.reservations.find(r => r.id == btn.dataset.id);
           if (!item) return;
+          currentReservationId = item.id;
           const form = document.getElementById("reservationForm");
           Object.keys(item).forEach(key => {
             if (form.elements[key]) form.elements[key].value = item[key];
