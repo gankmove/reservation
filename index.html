@@ -76,6 +76,7 @@
     const tabs = document.querySelectorAll("nav button");
     const sections = document.querySelectorAll("section");
     let reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
+let clients = JSON.parse(localStorage.getItem("clients") || "[]");
 
     function showTab(id) {
       sections.forEach(sec => sec.classList.remove("active"));
@@ -113,10 +114,13 @@
       document.getElementById('confirm').onclick = async () => {
   const now = new Date();
   const offsetMs = now.getTimezoneOffset() * 60000;
-  const swissTime = new Date(now.getTime() - offsetMs + 3600000); // GMT+1
+  const swissTime = new Date(now.getTime() - offsetMs + 3600000);
+  const data = Object.fromEntries(new FormData(form).entries());
   data.timestamp = swissTime.toISOString();
+
   const clientIndex = form.dataset.editClientId;
   const editingId = form.dataset.editingId;
+
   try {
     const clients = JSON.parse(localStorage.getItem("clients") || "[]");
     const reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
@@ -124,18 +128,43 @@
     const clientUrl = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
 
     if (clientIndex !== undefined) {
+      clients[clientIndex] = {
+        ...clients[clientIndex],
+        nom: data.nom,
+        prenom: data.prenom,
+        telephone: data.telephone,
+        dob: data.dob,
+        email: data.email,
+        reservations: (clients[clientIndex].reservations || 0) + 1
+      };
       await fetch(`${clientUrl}/${clients[clientIndex].id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fichesclient: data })
+        body: JSON.stringify({ fichesclient: clients[clientIndex] })
       });
     } else {
       const exists = clients.find(c => c.telephone === data.telephone);
       if (!exists) {
+        const newClient = {
+          nom: data.nom,
+          prenom: data.prenom,
+          telephone: data.telephone,
+          dob: data.dob,
+          email: data.email,
+          reservations: 1
+        };
+        clients.push(newClient);
         await fetch(clientUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fichesclient: data })
+          body: JSON.stringify({ fichesclient: newClient })
+        });
+      } else {
+        exists.reservations = (exists.reservations || 0) + 1;
+        await fetch(`${clientUrl}/${exists.id}`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fichesclient: exists })
         });
       }
     }
@@ -151,19 +180,15 @@
     showTab('liste');
     renderReservations();
     success.textContent = clientIndex !== undefined ? '✅ Fiche client mise à jour avec succès !' : '✅ Réservation enregistrée avec succès !';
-success.classList.remove('hidden');
-form.removeAttribute("data-editing-id");
+    success.classList.remove('hidden');
+    form.removeAttribute("data-editing-id");
     form.removeAttribute("data-edit-client-id");
     setTimeout(() => success.classList.add('hidden'), 4000);
   } catch (error) {
     alert("Erreur réseau : " + error.message);
   }
-        } catch (error) {
-          alert("Erreur réseau : " + error.message);
-        }
-      };
 
-      document.getElementById('cancel').onclick = () => {
+  document.getElementById('cancel').onclick = () => {
         confirmation.classList.add('hidden');
       };
     });
@@ -202,12 +227,10 @@ form.removeAttribute("data-editing-id");
       <strong>${r.prenom} ${r.nom}</strong><br>
       Tel: ${r.telephone}<br>
       Email: ${r.email || '—'}<br>
-      Allergènes : ${r.allergenes || 'Aucun'}<br>
-      Remarques : ${r.remarques || '—'}<br>
+      Réservations : ${r.reservations || 0}<br>
       <button onclick="editClient(${i})">Modifier</button>
       <button onclick="deleteReservation(${i})">Supprimer</button>
-    </div>`).join('');
-}
+    });
 
 function editClient(index) {
   const clients = JSON.parse(localStorage.getItem("clients") || "[]");
