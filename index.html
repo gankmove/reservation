@@ -24,10 +24,10 @@
 <body>
   <h1>Stella Marina</h1>
   <nav>
-    <button class="active">Réserver</button>
-    <button>Réservations</button>
-    <button>Fiches clients</button>
-  </nav>
+  <button data-tab="form" class="active">Réserver</button>
+  <button data-tab="liste">Réservations</button>
+  <button data-tab="clients">Fiches clients</button>
+</nav>
 
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
@@ -230,11 +230,11 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
     document.getElementById('searchClient').addEventListener('input', renderClients);
     window.addEventListener('DOMContentLoaded', async () => {
   tabs.forEach(btn => {
-    btn.addEventListener("click", function(event) {
-      const id = this.textContent.includes("Réserver") ? "form" : this.textContent.includes("Réservations") ? "liste" : "clients";
-      showTab(id, event);
-    });
+  btn.addEventListener("click", function() {
+    const id = this.dataset.tab;
+    showTab(id);
   });
+});
   try {
     const [resClients, resReservations] = await Promise.all([
     fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients"),
