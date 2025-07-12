@@ -175,8 +175,9 @@
       });
     });
       async function renderReservations() {
-      const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations");
-      const json = await res.json();
+  fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations")
+    .then(res => res.json())
+    .then(json => {
       const tbody = document.getElementById("reservationTable");
       tbody.innerHTML = "";
       json.reservations.forEach(r => {
@@ -188,9 +189,36 @@
           <td>${r.heure}</td>
           <td>${r.nombre}</td>
           <td>${r.table}</td>
-          <td><button disabled>Modifier</button> <button disabled>Supprimer</button></td>
+          <td><button class="edit-res" data-id="${r.id}">Modifier</button> <button class="delete-res" data-id="${r.id}">Supprimer</button></td>
         `;
         tbody.appendChild(tr);
+      });
+
+      // Ajout listeners suppression
+      document.querySelectorAll(".delete-res").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          if (confirm("Confirmer la suppression ?")) {
+            await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${btn.dataset.id}`, {
+              method: "DELETE"
+            });
+            renderReservations();
+          }
+        });
+      });
+
+      // Ajout listeners édition
+      document.querySelectorAll(".edit-res").forEach(btn => {
+        btn.addEventListener("click", async () => {
+          const item = json.reservations.find(r => r.id == btn.dataset.id);
+          if (!item) return;
+          const form = document.getElementById("reservationForm");
+          Object.keys(item).forEach(key => {
+            if (form.elements[key]) form.elements[key].value = item[key];
+          });
+          showTab("form");
+        });
+      });
+    });
       });
     }
 
