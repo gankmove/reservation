@@ -222,7 +222,7 @@ let clients = JSON.parse(localStorage.getItem("clients") || "[]");
     container.innerHTML = '<p>Aucun client trouvé.</p>';
     return;
   }
-  
+  container.innerHTML = filtered.map((r, i) => `
     <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
       <strong>${r.prenom} ${r.nom}</strong><br>
       Tel: ${r.telephone}<br>
@@ -231,6 +231,7 @@ let clients = JSON.parse(localStorage.getItem("clients") || "[]");
       <button onclick="editClient(${i})">Modifier</button>
       <button onclick="deleteReservation(${i})">Supprimer</button>
     </div>`).join('');
+}
     }
 
     function editReservation(index) {
