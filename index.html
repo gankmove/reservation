@@ -53,7 +53,7 @@
       <button type="submit" class="submit">Envoyer</button>
     </form>
     <div id="confirmation" class="confirmation hidden"></div>
-    <div id="success" class="success hidden" style="color:green;">✅ Réservation enregistrée avec succès !</div>
+    <div id="success" class="success hidden" style="color:green;"></div>
   </section>
 
   <section id="liste">
@@ -111,37 +111,53 @@
       confirmation.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
 
       document.getElementById('confirm').onclick = async () => {
-        const now = new Date();
-        const offsetMs = now.getTimezoneOffset() * 60000;
-        const swissTime = new Date(now.getTime() - offsetMs + 3600000); // GMT+1
-        data.timestamp = swissTime.toISOString();
-        const editingId = form.dataset.editingId;
-        try {
-          const existingClient = reservations.find(r => r.telephone === data.telephone);
-          const clientUrl = existingClient ? null : "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
-          const reservationUrl = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/reservations";
-          const method = "POST";
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60000;
+  const swissTime = new Date(now.getTime() - offsetMs + 3600000); // GMT+1
+  data.timestamp = swissTime.toISOString();
+  const clientIndex = form.dataset.editClientId;
+  const editingId = form.dataset.editingId;
+  try {
+    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+    const reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
+    const reservationUrl = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/reservations";
+    const clientUrl = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
 
-          if (clientUrl) {
-            await fetch(clientUrl, {
-              method,
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ fichesclient: data })
-            });
-          }
+    if (clientIndex !== undefined) {
+      await fetch(`${clientUrl}/${clients[clientIndex].id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fichesclient: data })
+      });
+    } else {
+      const exists = clients.find(c => c.telephone === data.telephone);
+      if (!exists) {
+        await fetch(clientUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fichesclient: data })
+        });
+      }
+    }
 
-          await fetch(reservationUrl, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ reservation: data })
-          });
+    await fetch(reservationUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ reservation: data })
+    });
 
-          form.reset();
-          confirmation.classList.add('hidden');
-          showTab('liste');
-          renderReservations();
-          success.classList.remove('hidden');
-          form.removeAttribute("data-editing-id");
+    form.reset();
+    confirmation.classList.add('hidden');
+    showTab('liste');
+    renderReservations();
+    success.textContent = clientIndex !== undefined ? '✅ Fiche client mise à jour avec succès !' : '✅ Réservation enregistrée avec succès !';
+success.classList.remove('hidden');
+form.removeAttribute("data-editing-id");
+    form.removeAttribute("data-edit-client-id");
+    setTimeout(() => success.classList.add('hidden'), 4000);
+  } catch (error) {
+    alert("Erreur réseau : " + error.message);
+  }
           setTimeout(() => success.classList.add('hidden'), 4000);
         } catch (error) {
           alert("Erreur réseau : " + error.message);
@@ -174,22 +190,43 @@
     }
 
     function renderClients() {
-      const search = document.getElementById('searchClient').value.toLowerCase();
-      const container = document.getElementById('clientResults');
-      const clients = JSON.parse(localStorage.getItem("clients") || "[]");
-      const filtered = clients.filter(r => r.nom.toLowerCase().includes(search) || r.telephone.includes(search));
-      if (filtered.length === 0) {
-        container.innerHTML = '<p>Aucun client trouvé.</p>';
-        return;
-      }
-      container.innerHTML = filtered.map((r, i) => `
-        <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
-          <strong>${r.prenom} ${r.nom}</strong><br>
-          Tel: ${r.telephone}<br>
-          Email: ${r.email || '—'}<br>
-          Allergènes : ${r.allergenes || 'Aucun'}<br>
-          Remarques : ${r.remarques || '—'}<br>
-          <button onclick="editReservation(${i})">Modifier</button>
+  const search = document.getElementById('searchClient').value.toLowerCase();
+  const container = document.getElementById('clientResults');
+  const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+  const filtered = clients.filter(r => r.nom.toLowerCase().includes(search) || r.telephone.includes(search));
+  if (filtered.length === 0) {
+    container.innerHTML = '<p>Aucun client trouvé.</p>';
+    return;
+  }
+  container.innerHTML = filtered.map((r, i) => `
+    <div style="border:1px solid #ccc; padding:10px; margin-top:10px;">
+      <strong>${r.prenom} ${r.nom}</strong><br>
+      Tel: ${r.telephone}<br>
+      Email: ${r.email || '—'}<br>
+      Allergènes : ${r.allergenes || 'Aucun'}<br>
+      Remarques : ${r.remarques || '—'}<br>
+      <button onclick="editClient(${i})">Modifier</button>
+      <button onclick="deleteReservation(${i})">Supprimer</button>
+    </div>`).join('');
+}
+
+function editClient(index) {
+  const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+  const c = clients[index];
+  if (!c) return;
+  const fieldsToFill = ["nom", "prenom", "telephone", "email", "dob", "allergenes", "remarques"];
+  fieldsToFill.forEach(key => {
+    const field = form.elements.namedItem(key);
+    if (field) field.value = c[key] || "";
+  });
+  const resetFields = ["date_reservation", "nombre", "heure", "table"];
+  resetFields.forEach(key => {
+    const field = form.elements.namedItem(key);
+    if (field) field.value = "";
+  });
+  form.dataset.editClientId = index; // pour mise à jour
+  showTab('form');
+}">Modifier</button>
           <button onclick="deleteReservation(${i})">Supprimer</button>
         </div>`).join('');
     }
