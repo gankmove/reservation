@@ -37,6 +37,7 @@
       <label>Téléphone* <input type="tel" name="telephone" required></label>
       <label>Email <input type="email" name="email"></label>
       <label>Date de naissance <input type="date" name="dob"></label>
+      <label>Date de réservation* <input type="date" name="date_reservation" required></label>
       <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
       <label>Heure de réservation* <input type="time" name="heure" required></label>
       <label>Table attribuée* <input type="text" name="table" required></label>
@@ -52,7 +53,7 @@
     <h2>Réservations à venir</h2>
     <table>
       <thead>
-        <tr><th>Nom</th><th>Téléphone</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
+        <tr><th>Nom</th><th>Téléphone</th><th>Date réservation</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
       </thead>
       <tbody id="reservationTable"></tbody>
     </table>
@@ -133,8 +134,9 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
       reservations.forEach((r, i) => {
         const row = `<tr>
           <td>${r.nom} ${r.prenom}</td>
-          <td>${r.telephone}</td>
-          <td>${r.heure}</td>
+<td>${r.telephone}</td>
+<td>${r.date_reservation || '—'}</td>
+<td>${r.heure}</td>
           <td>${r.nombre}</td>
           <td>${r.table}</td>
           <td>
@@ -159,7 +161,6 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
           <strong>${r.prenom} ${r.nom}</strong><br>
           Tel: ${r.telephone}<br>
           Email: ${r.email || '—'}<br>
-          Pour ${r.nombre} personnes à ${r.heure} (Table ${r.table})<br>
           Allergènes : ${r.allergenes || 'Aucun'}<br>
           Remarques : ${r.remarques || '—'}<br>
           <button onclick="editReservation(${i})">Modifier</button>
