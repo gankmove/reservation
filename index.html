@@ -111,14 +111,14 @@
 
       if (existing) {
         const updatedClient = { ...existing, reservations: parseInt(existing.reservations || 0) + 1 };
-        const updateRes = await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${existing.id}`, {
+        const updateRes = await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/reservations/fichesclients/${existing.id}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fichesclient: updatedClient })
         });
         if (!updateRes.ok) throw new Error("Erreur mise à jour fiche client");
       } else {
-        const createRes = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
+        const createRes = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/reservations/fichesclients", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ fichesclient: { ...client, reservations: 1 } })
