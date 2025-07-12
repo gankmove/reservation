@@ -77,14 +77,15 @@
     const sections = document.querySelectorAll("section");
     let reservations = JSON.parse(localStorage.getItem("reservations") || "[]");
 
-    function showTab(id, event) {
+    function showTab(id) {
   sections.forEach(sec => sec.classList.remove("active"));
   document.getElementById(id).classList.add("active");
-  tabs.forEach(btn => btn.classList.remove("active"));
-const tabMap = { form: 0, liste: 1, clients: 2 };
-if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
-      if (id === "liste") renderReservations();
-      if (id === "clients") renderClients();
+  tabs.forEach(btn => {
+    btn.classList.remove("active");
+    if (btn.dataset.tab === id) btn.classList.add("active");
+  });
+  if (id === "liste") renderReservations();
+  if (id === "clients") renderClients();
     }
 
     const form = document.getElementById('reservationForm');
