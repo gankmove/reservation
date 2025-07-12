@@ -114,13 +114,27 @@ async function saveReservationToSheet(data) {
   if (!res.ok) throw new Error("Erreur d'enregistrement");
 }
 
-async function saveClientToSheet(client) {
-  const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ fichesclient: client })
-  });
-  if (!res.ok) throw new Error("Erreur fiche client");
+async function saveOrUpdateClient(client) {
+  const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients");
+  const json = await response.json();
+  const existing = json.fichesclients.find(c => c.telephone === client.telephone);
+
+  if (existing) {
+    const updatedClient = { ...existing, reservations: parseInt(existing.reservations || 0) + 1 };
+    const updateRes = await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${existing.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fichesclient: updatedClient })
+    });
+    if (!updateRes.ok) throw new Error("Erreur mise à jour fiche client");
+  } else {
+    const createRes = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fichesclient: { ...client, reservations: 1 } })
+    });
+    if (!createRes.ok) throw new Error("Erreur création fiche client");
+  }
 }
 
 // Soumission formulaire
