@@ -96,7 +96,7 @@
     });
 
     async function saveReservationToSheet(data) {
-      const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/reservations/reservations", {
+      const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reservation: data })
@@ -105,7 +105,7 @@
     }
 
     async function saveOrUpdateClient(client) {
-      const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/reservations/fichesclients");
+      const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/fichesclients");
       const json = await response.json();
       const existing = json.fichesclients.find(c => c.telephone === client.telephone);
 
