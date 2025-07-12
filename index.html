@@ -96,6 +96,84 @@
       });
       showTab("form");
     });
-  </script>
+  // Données locales
+function saveToLocalStorage(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+function getFromLocalStorage(key) {
+  return JSON.parse(localStorage.getItem(key) || "[]");
+}
+
+// Envoi vers Sheety
+async function saveReservationToSheet(data) {
+  const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/reservations", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ reservation: data })
+  });
+  if (!res.ok) throw new Error("Erreur d'enregistrement");
+}
+
+async function saveClientToSheet(client) {
+  const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fichesclient: client })
+  });
+  if (!res.ok) throw new Error("Erreur fiche client");
+}
+
+// Soumission formulaire
+document.getElementById("reservationForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const form = e.target;
+  const data = Object.fromEntries(new FormData(form).entries());
+  data.timestamp = new Date().toLocaleString("fr-CH");
+  const client = {
+    nom: data.nom,
+    prenom: data.prenom,
+    telephone: data.telephone,
+    email: data.email,
+    dob: data.dob,
+    reservations: 1
+  };
+
+  document.getElementById("confirmation").classList.remove("hidden");
+  document.getElementById("confirmation").innerHTML = `
+    <p><strong>Confirmer la réservation pour :</strong></p>
+    <ul>
+      <li>${data.prenom} ${data.nom}</li>
+      <li>Tél : ${data.telephone}</li>
+      <li>Date : ${data.date_reservation}</li>
+      <li>Heure : ${data.heure}</li>
+      <li>Table : ${data.table}</li>
+    </ul>
+    <button id="confirmerBtn">Confirmer</button>
+  `;
+
+  document.getElementById("confirmerBtn").addEventListener("click", async () => {
+    try {
+      await saveReservationToSheet(data);
+
+      const clients = getFromLocalStorage("clients");
+      const existing = clients.find(c => c.telephone === client.telephone);
+      if (!existing) {
+        await saveClientToSheet(client);
+        clients.push(client);
+      } else {
+        existing.reservations++;
+      }
+      saveToLocalStorage("clients", clients);
+
+      document.getElementById("confirmation").classList.add("hidden");
+      document.getElementById("success").classList.remove("hidden");
+      document.getElementById("success").textContent = "Réservation enregistrée avec succès.";
+      form.reset();
+    } catch (err) {
+      alert("Erreur : " + err.message);
+    }
+  });
+});
+</script>
 </body>
 </html>
