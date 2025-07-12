@@ -101,6 +101,13 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
       recap += '</ul><button id="confirm">Confirmer</button> <button id="cancel">Annuler</button>';
       confirmation.innerHTML = recap;
       confirmation.classList.remove('hidden');
+      confirmation.style.position = 'fixed';
+      confirmation.style.top = '50%';
+      confirmation.style.left = '50%';
+      confirmation.style.transform = 'translate(-50%, -50%)';
+      confirmation.style.zIndex = '1000';
+      confirmation.style.background = '#fff';
+      confirmation.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
 
       document.getElementById('confirm').onclick = async () => {
   data.timestamp = new Date().toISOString();
@@ -119,6 +126,8 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
     if (response.ok) {
       form.reset();
       confirmation.classList.add('hidden');
+      showTab('liste'); // affiche les réservations après ajout
+      renderReservations();
       success.classList.remove('hidden');
       form.removeAttribute("data-editing-id");
       setTimeout(() => success.classList.add('hidden'), 4000);
