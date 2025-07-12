@@ -110,17 +110,33 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
       confirmation.style.boxShadow = '0 0 10px rgba(0,0,0,0.2)';
 
       document.getElementById('confirm').onclick = async () => {
-  data.timestamp = new Date().toISOString();
+  const now = new Date();
+  const offsetMs = now.getTimezoneOffset() * 60000;
+  const swissTime = new Date(now.getTime() - offsetMs + 3600000); // GMT+1
+  data.timestamp = swissTime.toISOString();
   const editingId = form.dataset.editingId;
   try {
-    const url = editingId ? `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${editingId}` : "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
-    const method = editingId ? "PUT" : "POST";
+    const existingClient = reservations.find(r => r.telephone === data.telephone);
+    const clientUrl = existingClient ? null : "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients";
+    const reservationUrl = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/reservations";
+    const method = "POST";
 
-    const response = await fetch(url, {
-      method,
+    if (clientUrl) {
+      await fetch(clientUrl, {
+        method,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fichesclient: data })
+      });
+    }
+
+    await fetch(reservationUrl, {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fichesclient: data })
-    });
+      body: JSON.stringify({ reservation: data })
+    });,
+        body: JSON.stringify({ fichesclient: data })
+      });
+    }
 
     const result = await response.json();
     if (response.ok) {
@@ -167,7 +183,8 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
     function renderClients() {
       const search = document.getElementById('searchClient').value.toLowerCase();
       const container = document.getElementById('clientResults');
-      const filtered = reservations.filter(r => r.nom.toLowerCase().includes(search) || r.telephone.includes(search));
+      const clients = JSON.parse(localStorage.getItem("clients") || "[]");
+      const filtered = clients.filter(r => r.nom.toLowerCase().includes(search) || r.telephone.includes(search));
       if (filtered.length === 0) {
         container.innerHTML = '<p>Aucun client trouvé.</p>';
         return;
@@ -200,9 +217,7 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
     localStorage.setItem("reservations", JSON.stringify(reservations));
     renderReservations();
     renderClients();
-    if (deleted.id) {
-      try {
-        await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients/${deleted.id}`, {
+    // Ne pas supprimer la fiche client sur Sheety lors de la suppression d'une réservation`, {
           method: "DELETE"
         });
       } catch (err) {
@@ -221,11 +236,19 @@ if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
     });
   });
   try {
-    const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients");
-    const result = await res.json();
-    if (result && result.fichesclients) {
-      reservations = result.fichesclients;
-      localStorage.setItem("reservations", JSON.stringify(reservations));
+    const [resClients, resReservations] = await Promise.all([
+    fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/fichesclients"),
+    fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/réservations/reservations")
+  ]);
+  const resultClients = await resClients.json();
+  const resultReservations = await resReservations.json();
+  if (resultClients && resultClients.fichesclients) {
+    localStorage.setItem("clients", JSON.stringify(resultClients.fichesclients));
+  }
+  if (resultReservations && resultReservations.reservations) {
+    reservations = resultReservations.reservations;
+    localStorage.setItem("reservations", JSON.stringify(reservations));
+  }
     }
   } catch (e) {
     console.error("Erreur de chargement depuis Sheety :", e);
