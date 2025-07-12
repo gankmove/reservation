@@ -158,7 +158,6 @@ form.removeAttribute("data-editing-id");
   } catch (error) {
     alert("Erreur réseau : " + error.message);
   }
-          setTimeout(() => success.classList.add('hidden'), 4000);
         } catch (error) {
           alert("Erreur réseau : " + error.message);
         }
@@ -226,9 +225,7 @@ function editClient(index) {
   });
   form.dataset.editClientId = index; // pour mise à jour
   showTab('form');
-}">Modifier</button>
-          <button onclick="deleteReservation(${i})">Supprimer</button>
-        </div>`).join('');
+</div>`).join('');
     }
 
     function editReservation(index) {
