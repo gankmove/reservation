@@ -73,7 +73,8 @@
   sections.forEach(sec => sec.classList.remove("active"));
   document.getElementById(id).classList.add("active");
   tabs.forEach(btn => btn.classList.remove("active"));
-  if (event) event.target.classList.add("active");
+const tabMap = { form: 0, liste: 1, clients: 2 };
+if (tabMap[id] !== undefined) tabs[tabMap[id]].classList.add("active");
       if (id === "liste") renderReservations();
       if (id === "clients") renderClients();
     }
@@ -193,7 +194,6 @@
     }
   }
 }
-    }
 
     document.getElementById('searchClient').addEventListener('input', renderClients);
     window.addEventListener('DOMContentLoaded', async () => {
