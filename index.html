@@ -5,6 +5,24 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stella Marina</title>
   <style>
+    .client-section {
+      background-color: #e0f2fe;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .client-section h3 {
+      color: #0284c7;
+    }
+    .reservation-section {
+      background-color: #d1fae5;
+      padding: 15px;
+      border-radius: 6px;
+      margin-bottom: 20px;
+    }
+    .reservation-section h3 {
+      color: #047857;
+    }
     body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
     h1, h2 { text-align: center; }
     nav { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; }
@@ -33,8 +51,8 @@
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
+<div class="client-section">
 <h3>Informations du client</h3>
-<div>
       <input type="hidden" name="id" id="reservationId" />
       <label>Nom* <input type="text" name="nom" list="nomSuggestions" required></label>
 <datalist id="nomSuggestions"></datalist>
@@ -43,8 +61,8 @@
       <label>Email <input type="email" name="email"></label>
       <label>Date de naissance <input type="date" name="dob"></label>
       </div>
+<div class="reservation-section">
 <h3>Détails de la réservation</h3>
-<div>
 <label>Date de réservation* <input type="date" name="dateReservation" required></label>
       <label>Heure de réservation* <input type="time" name="heure" required></label>
       <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
