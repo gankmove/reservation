@@ -34,7 +34,8 @@
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
       <input type="hidden" name="id" id="reservationId" />
-      <label>Nom* <input type="text" name="nom" required></label>
+      <label>Nom* <input type="text" name="nom" list="nomSuggestions" required></label>
+<datalist id="nomSuggestions"></datalist>
       <label>Prénom* <input type="text" name="prenom" required></label>
       <label>Téléphone* <input type="tel" name="telephone" required></label>
       <label>Email <input type="email" name="email"></label>
@@ -68,7 +69,7 @@
     <table>
       <thead>
         <tr>
-          <th>Nom</th><th>Prénom</th><th>Téléphone</th><th>Email</th><th>Date de naissance</th><th>Actions</th>
+          <th>Nom</th><th>Prénom</th><th>Téléphone</th><th>Email</th><th>Date de naissance</th><th>Réservations</th><th>Actions</th>
         </tr>
       </thead>
       <tbody id="clientsTable"></tbody>
@@ -119,6 +120,26 @@
     }
 
     document.addEventListener("DOMContentLoaded", () => {
+
+      // Remplir la datalist avec les noms connus
+      async function remplirSuggestionsClients() {
+        try {
+          const res = await fetch(`${CLIENTS_API_URL}/fichesclients`);
+          const json = await res.json();
+          const datalist = document.getElementById("nomSuggestions");
+          datalist.innerHTML = "";
+          if (json.fichesclients) {
+            json.fichesclients.forEach(c => {
+              const option = document.createElement("option");
+              option.value = c.nom;
+              datalist.appendChild(option);
+            });
+          }
+        } catch (e) {
+          console.warn("Erreur lors du chargement des suggestions client");
+        }
+      }
+      remplirSuggestionsClients();
       const tabs = document.querySelectorAll("nav button");
       const sections = document.querySelectorAll("section");
 
@@ -274,7 +295,7 @@
             <td>${c.prenom}</td>
             <td>${c.telephone}</td>
             <td>${c.email}</td>
-            <td>${c.dob}</td>
+            <td>${c.dob}</td><td>${c.reservations || 0}</td>
             <td><button class="delete-client" data-id="${c.id}" data-tel="${c.telephone}">Supprimer client</button></td>
           `;
           tbody.appendChild(tr);
