@@ -180,7 +180,9 @@
 
             if (!res.ok) throw new Error("Erreur d'envoi");
 
-            await updateClient(data.telephone, data.nom, data.prenom, data.email, data.dob);
+            if (!isEditing) {
+              await updateClient(data.telephone, data.nom, data.prenom, data.email, data.dob);
+            }
 
             document.getElementById("confirmation").style.display = "none";
             document.getElementById("success").style.display = "block";
