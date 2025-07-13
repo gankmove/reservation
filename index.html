@@ -16,6 +16,8 @@
     input, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
     button.submit { margin-top: 20px; padding: 10px 20px; background-color: black; color: white; border: none; cursor: pointer; }
     .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
   </style>
 </head>
 <body>
@@ -48,37 +50,43 @@
 
   <section id="liste">
     <h2>Réservations à venir</h2>
-    <p>(à intégrer)</p>
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="reservationTable"></tbody>
+    </table>
   </section>
 
   <section id="clients">
     <h2>Fiches clients</h2>
-    <p>(à intégrer)</p>
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Téléphone</th><th>Email</th><th>Réservations</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="clientTable"></tbody>
+    </table>
   </section>
 
   <script>
-    const SHEETY_BASE = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata";
+    const apiBase = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata";
 
     document.addEventListener("DOMContentLoaded", () => {
       const tabs = document.querySelectorAll("nav button");
       const sections = document.querySelectorAll("section");
 
       function showTab(id) {
-        sections.forEach(sec => sec.classList.remove("active"));
+        sections.forEach(s => s.classList.remove("active"));
         document.getElementById(id).classList.add("active");
-        tabs.forEach(btn => {
-          btn.classList.remove("active");
-          if (btn.dataset.tab === id) btn.classList.add("active");
-        });
+        tabs.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === id));
+
+        if (id === "liste") loadReservations();
+        if (id === "clients") loadClients();
       }
 
-      tabs.forEach(btn => {
-        btn.addEventListener("click", () => {
-          showTab(btn.dataset.tab);
-        });
-      });
+      tabs.forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
 
-      // Réservation
+      // Formulaire de réservation
       document.getElementById("reservationForm").addEventListener("submit", e => {
         e.preventDefault();
         const form = e.target;
@@ -104,32 +112,12 @@
 
         document.getElementById("confirmerBtn").addEventListener("click", async () => {
           try {
-            // Enregistrement de la réservation
-            const res = await fetch(`${SHEETY_BASE}/reservations`, {
+            const res = await fetch(`${apiBase}/reservations`, {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({ reservation: data })
             });
-
-            // Mise à jour ou ajout fiche client
-            const r = await fetch(`${SHEETY_BASE}/fichesclients`);
-            const json = await r.json();
-            const found = json.fichesclients.find(c => c.telephone === data.telephone);
-
-            if (found) {
-              await fetch(`${SHEETY_BASE}/fichesclients/${found.id}`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fichesclient: { ...found, reservations: (parseInt(found.reservations || 0) + 1) } })
-              });
-            } else {
-              await fetch(`${SHEETY_BASE}/fichesclients`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ fichesclient: { ...data, reservations: 1 } })
-              });
-            }
-
+            if (!res.ok) throw new Error("Erreur d'envoi");
             document.getElementById("confirmation").style.display = "none";
             document.getElementById("success").style.display = "block";
             document.getElementById("success").textContent = "Réservation envoyée avec succès.";
@@ -139,6 +127,52 @@
           }
         });
       });
+
+      // Liste des réservations
+      async function loadReservations() {
+        const tbody = document.getElementById("reservationTable");
+        tbody.innerHTML = "Chargement...";
+        const res = await fetch(`${apiBase}/reservations`);
+        const data = await res.json();
+        tbody.innerHTML = "";
+        data.reservations.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${r.nom} ${r.prenom}</td><td>${r.telephone}</td><td>${r.date_reservation}</td><td>${r.heure}</td>
+            <td><button onclick="deleteReservation(${r.id})">Supprimer</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      // Liste des clients
+      async function loadClients() {
+        const tbody = document.getElementById("clientTable");
+        tbody.innerHTML = "Chargement...";
+        const res = await fetch(`${apiBase}/fichesclients`);
+        const data = await res.json();
+        tbody.innerHTML = "";
+        data.fichesclients.forEach(c => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `<td>${c.prenom} ${c.nom}</td><td>${c.telephone}</td><td>${c.email}</td><td>${c.reservations}</td>
+            <td><button onclick="deleteClient(${c.id})">Supprimer</button></td>`;
+          tbody.appendChild(tr);
+        });
+      }
+
+      window.deleteReservation = async function(id) {
+        if (confirm("Supprimer cette réservation ?")) {
+          await fetch(`${apiBase}/reservations/${id}`, { method: "DELETE" });
+          loadReservations();
+        }
+      }
+
+      window.deleteClient = async function(id) {
+        if (confirm("Supprimer cette fiche client ?")) {
+          await fetch(`${apiBase}/fichesclients/${id}`, { method: "DELETE" });
+          loadClients();
+        }
+      }
+
+      showTab("form");
     });
   </script>
 </body>
