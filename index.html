@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Stella Marina</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
@@ -18,6 +18,7 @@
     .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -31,6 +32,7 @@
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
+      <input type="hidden" name="id" />
       <label>Nom* <input type="text" name="nom" required></label>
       <label>Prénom* <input type="text" name="prenom" required></label>
       <label>Téléphone* <input type="tel" name="telephone" required></label>
@@ -50,6 +52,12 @@
 
   <section id="liste">
     <h2>Réservations à venir</h2>
+    <table>
+      <thead>
+        <tr><th>Nom</th><th>Téléphone</th><th>Date réservation</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
+      </thead>
+      <tbody id="reservationTable"></tbody>
+    </table>
   </section>
 
   <section id="clients">
@@ -57,131 +65,122 @@
     <p>(à intégrer)</p>
   </section>
 
-<script>
-let currentReservationId = null;
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const tabs = document.querySelectorAll("nav button");
+      const sections = document.querySelectorAll("section");
+      const form = document.getElementById("reservationForm");
 
-document.addEventListener("DOMContentLoaded", () => {
-  const tabs = document.querySelectorAll("nav button");
-  const sections = document.querySelectorAll("section");
+      function showTab(id) {
+        sections.forEach(sec => sec.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        tabs.forEach(btn => {
+          btn.classList.remove("active");
+          if (btn.dataset.tab === id) btn.classList.add("active");
+        });
+      }
 
-  function showTab(id) {
-    sections.forEach(sec => sec.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
-    tabs.forEach(btn => {
-      btn.classList.remove("active");
-      if (btn.dataset.tab === id) btn.classList.add("active");
-    });
-  }
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+          showTab(btn.dataset.tab);
+          if (btn.dataset.tab === "liste") renderReservations();
+        });
+      });
 
-  tabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      showTab(btn.dataset.tab);
-    });
-  });
-
-  document.getElementById("reservationForm").addEventListener("submit", e => {
-    e.preventDefault();
-    const form = e.target;
-    const data = Object.fromEntries(new FormData(form).entries());
-    data.timestamp = new Date().toLocaleString("fr-CH");
-
-    document.getElementById("confirmation").innerHTML = `
-      <p><strong>Confirmer la réservation :</strong></p>
-      <ul>
-        <li>Nom : ${data.prenom} ${data.nom}</li>
-        <li>Téléphone : ${data.telephone}</li>
-        <li>Email : ${data.email || '—'}</li>
-        <li>Date de réservation : ${data.date_reservation}</li>
-        <li>Heure : ${data.heure}</li>
-        <li>Nombre de personnes : ${data.nombre}</li>
-        <li>Table : ${data.table}</li>
-        <li>Allergènes : ${data.allergenes || '—'}</li>
-        <li>Remarques : ${data.remarques || '—'}</li>
-      </ul>
-      <button id="confirmerBtn">Confirmer</button>
-    `;
-    document.getElementById("confirmation").style.display = "block";
-
-    document.getElementById("confirmerBtn").addEventListener("click", async () => {
-      try {
-        const url = currentReservationId
-          ? `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${currentReservationId}`
-          : `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations`;
-
-        const method = currentReservationId ? "PUT" : "POST";
-
-        const res = await fetch(url, {
-          method: method,
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reservation: data })
+      async function renderReservations() {
+        const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations");
+        const json = await res.json();
+        const tbody = document.getElementById("reservationTable");
+        tbody.innerHTML = "";
+        json.reservations.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.nom} ${r.prenom}</td>
+            <td>${r.telephone}</td>
+            <td>${r.date_reservation}</td>
+            <td>${r.heure}</td>
+            <td>${r.nombre}</td>
+            <td>${r.table}</td>
+            <td>
+              <button class="edit" data-id="${r.id}">Modifier</button>
+              <button class="delete" data-id="${r.id}">Supprimer</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
         });
 
-        if (!res.ok) throw new Error("Erreur lors de l'envoi");
+        document.querySelectorAll(".edit").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            const id = btn.dataset.id;
+            const r = json.reservations.find(x => x.id == id);
+            if (!r) return;
+            Object.entries(r).forEach(([k,v]) => {
+              if (form.elements[k]) form.elements[k].value = v;
+            });
+            form.elements["id"].value = id;
+            showTab("form");
+          });
+        });
 
-        document.getElementById("confirmation").style.display = "none";
-        document.getElementById("success").style.display = "block";
-        document.getElementById("success").textContent = "Réservation enregistrée avec succès.";
-        form.reset();
-        currentReservationId = null;
-      } catch (err) {
-        alert("Erreur : " + err.message);
+        document.querySelectorAll(".delete").forEach(btn => {
+          btn.addEventListener("click", async () => {
+            if (confirm("Supprimer cette réservation ?")) {
+              await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${btn.dataset.id}`, {
+                method: "DELETE"
+              });
+              renderReservations();
+            }
+          });
+        });
       }
-    });
-  });
 
-  document.querySelector("button[data-tab='liste']").addEventListener("click", loadReservations);
+      form.addEventListener("submit", e => {
+        e.preventDefault();
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.timestamp = new Date().toLocaleString("fr-CH");
 
-  async function loadReservations() {
-    const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations");
-    const json = await res.json();
-    const section = document.getElementById("liste");
-    let table = section.querySelector("table");
+        document.getElementById("confirmation").innerHTML = `
+          <p><strong>Confirmer la réservation :</strong></p>
+          <ul>
+            <li>Nom : ${data.prenom} ${data.nom}</li>
+            <li>Téléphone : ${data.telephone}</li>
+            <li>Email : ${data.email || '—'}</li>
+            <li>Date de réservation : ${data.date_reservation}</li>
+            <li>Heure : ${data.heure}</li>
+            <li>Nombre de personnes : ${data.nombre}</li>
+            <li>Table : ${data.table}</li>
+            <li>Allergènes : ${data.allergenes || '—'}</li>
+            <li>Remarques : ${data.remarques || '—'}</li>
+          </ul>
+          <button id="confirmerBtn">Confirmer</button>
+        `;
+        document.getElementById("confirmation").style.display = "block";
 
-    if (!table) {
-      table = document.createElement("table");
-      table.innerHTML = `
-        <thead>
-          <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
-        </thead>
-        <tbody></tbody>
-      `;
-      section.appendChild(table);
-    }
+        document.getElementById("confirmerBtn").addEventListener("click", async () => {
+          const method = data.id ? "PUT" : "POST";
+          const url = `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations${data.id ? '/' + data.id : ''}`;
+          const bodyKey = data.id ? "reservation" : "reservation";
 
-    const tbody = table.querySelector("tbody");
-    tbody.innerHTML = "";
-
-    json.reservations.forEach(r => {
-      const tr = document.createElement("tr");
-      tr.innerHTML = `
-        <td>${r.nom} ${r.prenom}</td>
-        <td>${r.telephone}</td>
-        <td>${r.date_reservation}</td>
-        <td>${r.heure}</td>
-        <td>${r.nombre}</td>
-        <td>${r.table}</td>
-        <td><button class="edit-btn" data-id="${r.id}">Modifier</button></td>
-      `;
-      tbody.appendChild(tr);
-    });
-
-    tbody.querySelectorAll(".edit-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
-        const r = json.reservations.find(x => x.id == id);
-        if (!r) return;
-        const form = document.getElementById("reservationForm");
-        for (const key in r) {
-          if (form.elements[key]) {
-            form.elements[key].value = r[key];
+          try {
+            const res = await fetch(url, {
+              method,
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ [bodyKey]: data })
+            });
+            if (!res.ok) throw new Error("Erreur d'envoi");
+            document.getElementById("confirmation").style.display = "none";
+            document.getElementById("success").style.display = "block";
+            document.getElementById("success").textContent = data.id ? "Réservation modifiée." : "Réservation envoyée.";
+            form.reset();
+            renderReservations();
+          } catch (err) {
+            alert("Erreur : " + err.message);
           }
-        }
-        currentReservationId = id;
-        showTab("form");
+        });
       });
+
+      showTab("form");
     });
-  }
-});
-</script>
+  </script>
 </body>
 </html>
