@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Stella Marina</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
@@ -18,10 +18,12 @@
     .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    button.edit, button.delete, button.delete-client { background: none; border: none; color: blue; cursor: pointer; padding: 4px 8px; }
   </style>
 </head>
 <body>
   <h1>Stella Marina</h1>
+
   <nav>
     <button data-tab="form" class="active">Réserver</button>
     <button data-tab="liste">Réservations</button>
@@ -31,6 +33,7 @@
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
+      <input type="hidden" name="id" id="reservationId" />
       <label>Nom* <input type="text" name="nom" required></label>
       <label>Prénom* <input type="text" name="prenom" required></label>
       <label>Téléphone* <input type="tel" name="telephone" required></label>
@@ -52,7 +55,9 @@
     <h2>Réservations à venir</h2>
     <table>
       <thead>
-        <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
+        <tr>
+          <th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th>
+        </tr>
       </thead>
       <tbody id="reservationTable"></tbody>
     </table>
@@ -60,7 +65,14 @@
 
   <section id="clients">
     <h2>Fiches clients</h2>
-    <p>(à intégrer)</p>
+    <table>
+      <thead>
+        <tr>
+          <th>Nom</th><th>Prénom</th><th>Téléphone</th><th>Email</th><th>Date de naissance</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="clientsTable"></tbody>
+    </table>
   </section>
 
   <script>
@@ -79,6 +91,7 @@
         });
 
         if (id === "liste") renderReservations();
+        if (id === "clients") renderClients();
       }
 
       tabs.forEach(btn => {
@@ -90,9 +103,10 @@
         const form = e.target;
         const data = Object.fromEntries(new FormData(form).entries());
         data.timestamp = new Date().toLocaleString("fr-CH");
+        const isEditing = !!data.id;
 
         document.getElementById("confirmation").innerHTML = `
-          <p><strong>Confirmer la réservation :</strong></p>
+          <p><strong>${isEditing ? 'Confirmer la modification' : 'Confirmer la réservation'} :</strong></p>
           <ul>
             <li>Nom : ${data.prenom} ${data.nom}</li>
             <li>Téléphone : ${data.telephone}</li>
@@ -110,16 +124,31 @@
 
         document.getElementById("confirmerBtn").addEventListener("click", async () => {
           try {
-            const res = await fetch(`${API_URL}/reservations`, {
-              method: "POST",
+            const url = isEditing
+              ? `${API_URL}/reservations/${data.id}`
+              : `${API_URL}/reservations`;
+            const method = isEditing ? "PUT" : "POST";
+
+            const payload = { ...data };
+            delete payload.id;
+
+            const res = await fetch(url, {
+              method,
               headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reservation: data })
+              body: JSON.stringify({ reservation: payload })
             });
+
             if (!res.ok) throw new Error("Erreur d'envoi");
+
             document.getElementById("confirmation").style.display = "none";
             document.getElementById("success").style.display = "block";
-            document.getElementById("success").textContent = "Réservation envoyée avec succès.";
+            document.getElementById("success").textContent = isEditing
+              ? "Réservation mise à jour avec succès."
+              : "Réservation envoyée avec succès.";
             form.reset();
+            document.getElementById("reservationId").value = "";
+            renderReservations();
+
           } catch (err) {
             alert("Erreur : " + err.message);
           }
@@ -127,26 +156,123 @@
       });
 
       async function renderReservations() {
-        const res = await fetch(`${API_URL}/reservations`);
-        const json = await res.json();
-        const tbody = document.getElementById("reservationTable");
-        tbody.innerHTML = "";
-        json.reservations.forEach(r => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `
-            <td>${r.nom} ${r.prenom}</td>
-            <td>${r.telephone}</td>
-            <td>${r.dateReservation || ''}</td>
-            <td>${r.heure}</td>
-            <td>${r.nombre}</td>
-            <td>${r.table}</td>
-            <td>
-              <button class="edit" data-id="${r.id}">✏️</button>
-              <button class="delete" data-id="${r.id}">🗑️</button>
-            </td>
-          `;
-          tbody.appendChild(tr);
-        });
+        try {
+          const res = await fetch(`${API_URL}/reservations`);
+          const json = await res.json();
+          const tbody = document.getElementById("reservationTable");
+          tbody.innerHTML = "";
+          json.reservations.forEach(r => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${r.nom} ${r.prenom}</td>
+              <td>${r.telephone}</td>
+              <td>${r.dateReservation || ''}</td>
+              <td>${r.heure}</td>
+              <td>${r.nombre}</td>
+              <td>${r.table}</td>
+              <td>
+                <button class="edit" data-id="${r.id}">Édition</button>
+                <button class="delete" data-id="${r.id}">Suppression</button>
+              </td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          tbody.querySelectorAll(".delete").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const id = btn.dataset.id;
+              if (confirm("Supprimer cette réservation ?")) {
+                await fetch(`${API_URL}/reservations/${id}`, { method: "DELETE" });
+                renderReservations();
+              }
+            });
+          });
+
+          tbody.querySelectorAll(".edit").forEach(btn => {
+            btn.addEventListener("click", () => {
+              const r = json.reservations.find(x => x.id == btn.dataset.id);
+              const form = document.getElementById("reservationForm");
+
+              form.nom.value = r.nom;
+              form.prenom.value = r.prenom;
+              form.telephone.value = r.telephone;
+              form.email.value = r.email || '';
+              form.dob.value = r.dob || '';
+              form.dateReservation.value = r.dateReservation;
+              form.heure.value = r.heure;
+              form.nombre.value = r.nombre;
+              form.table.value = r.table;
+              form.allergenes.value = r.allergenes || '';
+              form.remarques.value = r.remarques || '';
+              form.id.value = r.id;
+
+              showTab("form");
+            });
+          });
+
+        } catch (err) {
+          alert("Erreur de chargement des réservations : " + err.message);
+        }
+      }
+
+      async function renderClients() {
+        try {
+          const res = await fetch(`${API_URL}/reservations`);
+          const json = await res.json();
+          const clients = {};
+
+          json.reservations.forEach(r => {
+            const key = `${r.nom.toLowerCase()}_${r.prenom.toLowerCase()}_${r.telephone}`;
+            if (!clients[key]) {
+              clients[key] = {
+                nom: r.nom,
+                prenom: r.prenom,
+                telephone: r.telephone,
+                email: r.email || '',
+                dob: r.dob || ''
+              };
+            }
+          });
+
+          const tbody = document.getElementById("clientsTable");
+          tbody.innerHTML = "";
+
+          Object.values(clients).forEach(c => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+              <td>${c.nom}</td>
+              <td>${c.prenom}</td>
+              <td>${c.telephone}</td>
+              <td>${c.email}</td>
+              <td>${c.dob}</td>
+              <td><button class="delete-client" data-tel="${c.telephone}">Supprimer client</button></td>
+            `;
+            tbody.appendChild(tr);
+          });
+
+          tbody.querySelectorAll(".delete-client").forEach(btn => {
+            btn.addEventListener("click", async () => {
+              const tel = btn.dataset.tel;
+              if (!confirm("Supprimer ce client et toutes ses réservations ?")) return;
+
+              try {
+                const res = await fetch(`${API_URL}/reservations`);
+                const json = await res.json();
+                const reservations = json.reservations.filter(r => r.telephone === tel);
+                for (const r of reservations) {
+                  await fetch(`${API_URL}/reservations/${r.id}`, { method: "DELETE" });
+                }
+                renderClients();
+                renderReservations();
+              } catch (err) {
+                alert("Erreur lors de la suppression : " + err.message);
+              }
+            });
+          });
+
+        } catch (err) {
+          alert("Erreur de chargement des clients : " + err.message);
+        }
       }
     });
   </script>
