@@ -15,9 +15,9 @@
     label { display: block; margin-top: 10px; font-weight: bold; }
     input, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
     button.submit { margin-top: 20px; padding: 10px 20px; background-color: black; color: white; border: none; cursor: pointer; }
+    .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -29,108 +29,126 @@
   </nav>
 
   <section id="form" class="active">
-    <h2>Réservation</h2>
-    <form id="formulaire">
-      <label>Nom* <input name="nom" required></label>
-      <label>Prénom* <input name="prenom" required></label>
-      <label>Téléphone* <input name="telephone" required></label>
-      <label>Email <input name="email"></label>
-      <label>Date naissance <input type="date" name="dob"></label>
-      <label>Date réservation* <input type="date" name="dateReservation" required></label>
-      <label>Heure* <input type="time" name="heure" required></label>
-      <label>Personnes* <input type="number" name="nombre" required></label>
-      <label>Table* <input name="table" required></label>
+    <h2>Formulaire de réservation</h2>
+    <form id="reservationForm">
+      <label>Nom* <input type="text" name="nom" required></label>
+      <label>Prénom* <input type="text" name="prenom" required></label>
+      <label>Téléphone* <input type="tel" name="telephone" required></label>
+      <label>Email <input type="email" name="email"></label>
+      <label>Date de naissance <input type="date" name="dob"></label>
+      <label>Date de réservation* <input type="date" name="dateReservation" required></label>
+      <label>Heure de réservation* <input type="time" name="heure" required></label>
+      <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
+      <label>Table attribuée* <input type="text" name="table" required></label>
       <label>Allergènes <textarea name="allergenes"></textarea></label>
       <label>Remarques <textarea name="remarques"></textarea></label>
       <button type="submit" class="submit">Envoyer</button>
     </form>
-    <div id="success" class="hidden">Réservation enregistrée.</div>
+    <div id="confirmation" class="confirmation" style="display:none"></div>
+    <div id="success" class="success" style="display:none; color:green;"></div>
   </section>
 
   <section id="liste">
-    <h2>Réservations</h2>
+    <h2>Réservations à venir</h2>
     <table>
       <thead>
-        <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Actions</th></tr>
+        <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
       </thead>
-      <tbody id="tableRes"></tbody>
+      <tbody id="reservationTable"></tbody>
     </table>
   </section>
 
   <section id="clients">
     <h2>Fiches clients</h2>
-    <div id="ficheClients"></div>
+    <p>(à intégrer)</p>
   </section>
 
   <script>
-    const API = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata";
+    const API_URL = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata";
 
-    document.querySelectorAll("nav button").forEach(btn => {
-      btn.onclick = () => {
-        document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-        document.getElementById(btn.dataset.tab).classList.add("active");
-        document.querySelectorAll("nav button").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        if (btn.dataset.tab === "liste") chargerRes();
-        if (btn.dataset.tab === "clients") chargerClients();
-      };
-    });
+    document.addEventListener("DOMContentLoaded", () => {
+      const tabs = document.querySelectorAll("nav button");
+      const sections = document.querySelectorAll("section");
 
-    document.getElementById("formulaire").onsubmit = async (e) => {
-      e.preventDefault();
-      const data = Object.fromEntries(new FormData(e.target).entries());
-      data.timestamp = new Date().toLocaleString("fr-CH");
-      await fetch(`${API}/reservations`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ reservation: data })
-      });
-      await fetch(`${API}/fichesclients`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fichesclient: {
-          nom: data.nom,
-          prenom: data.prenom,
-          telephone: data.telephone,
-          email: data.email,
-          dob: data.dob,
-          reservations: 1
-        } })
-      });
-      document.getElementById("success").classList.remove("hidden");
-      e.target.reset();
-    };
+      function showTab(id) {
+        sections.forEach(sec => sec.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        tabs.forEach(btn => {
+          btn.classList.remove("active");
+          if (btn.dataset.tab === id) btn.classList.add("active");
+        });
 
-    async function chargerRes() {
-      const res = await fetch(`${API}/reservations`).then(r => r.json());
-      const tbody = document.getElementById("tableRes");
-      tbody.innerHTML = "";
-      res.reservations.forEach(r => {
-        const tr = document.createElement("tr");
-        tr.innerHTML = `<td>${r.prenom} ${r.nom}</td><td>${r.telephone}</td><td>${r.dateReservation}</td>
-          <td><button onclick="supprRes(${r.id})">Supprimer</button></td>`;
-        tbody.appendChild(tr);
-      });
-    }
-
-    async function supprRes(id) {
-      if (confirm("Supprimer cette réservation ?")) {
-        await fetch(`${API}/reservations/${id}`, { method: "DELETE" });
-        chargerRes();
+        if (id === "liste") renderReservations();
       }
-    }
 
-    async function chargerClients() {
-      const res = await fetch(`${API}/fichesclients`).then(r => r.json());
-      const box = document.getElementById("ficheClients");
-      box.innerHTML = res.fichesclients.map(c =>
-        `<div style='border:1px solid #ccc;padding:8px;margin:5px'>
-          <b>${c.prenom} ${c.nom}</b><br>
-          Tél: ${c.telephone} | Email: ${c.email || '-'}<br>
-          Réservations: ${c.reservations || 1}
-        </div>`
-      ).join("");
-    }
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => showTab(btn.dataset.tab));
+      });
+
+      document.getElementById("reservationForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const form = e.target;
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.timestamp = new Date().toLocaleString("fr-CH");
+
+        document.getElementById("confirmation").innerHTML = `
+          <p><strong>Confirmer la réservation :</strong></p>
+          <ul>
+            <li>Nom : ${data.prenom} ${data.nom}</li>
+            <li>Téléphone : ${data.telephone}</li>
+            <li>Email : ${data.email || '—'}</li>
+            <li>Date de réservation : ${data.dateReservation}</li>
+            <li>Heure : ${data.heure}</li>
+            <li>Nombre de personnes : ${data.nombre}</li>
+            <li>Table : ${data.table}</li>
+            <li>Allergènes : ${data.allergenes || '—'}</li>
+            <li>Remarques : ${data.remarques || '—'}</li>
+          </ul>
+          <button id="confirmerBtn">Confirmer</button>
+        `;
+        document.getElementById("confirmation").style.display = "block";
+
+        document.getElementById("confirmerBtn").addEventListener("click", async () => {
+          try {
+            const res = await fetch(`${API_URL}/reservations`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ reservation: data })
+            });
+            if (!res.ok) throw new Error("Erreur d'envoi");
+            document.getElementById("confirmation").style.display = "none";
+            document.getElementById("success").style.display = "block";
+            document.getElementById("success").textContent = "Réservation envoyée avec succès.";
+            form.reset();
+          } catch (err) {
+            alert("Erreur : " + err.message);
+          }
+        });
+      });
+
+      async function renderReservations() {
+        const res = await fetch(`${API_URL}/reservations`);
+        const json = await res.json();
+        const tbody = document.getElementById("reservationTable");
+        tbody.innerHTML = "";
+        json.reservations.forEach(r => {
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td>${r.nom} ${r.prenom}</td>
+            <td>${r.telephone}</td>
+            <td>${r.dateReservation || ''}</td>
+            <td>${r.heure}</td>
+            <td>${r.nombre}</td>
+            <td>${r.table}</td>
+            <td>
+              <button class="edit" data-id="${r.id}">✏️</button>
+              <button class="delete" data-id="${r.id}">🗑️</button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        });
+      }
+    });
   </script>
 </body>
 </html>
