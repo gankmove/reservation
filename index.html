@@ -73,7 +73,8 @@
   </section>
 
   <script>
-    let currentReservationId = null;
+    const API_URL = "https://script.google.com/macros/s/AKfycbxac4v5XO77KVECCwx-EMG_yyZcn7dMNfaiHRZ8O0b4sOrDmYZPB9B24oIwdAgjQIb-/exec";
+
     const tabs = document.querySelectorAll("nav button");
     const sections = document.querySelectorAll("section");
 
@@ -87,19 +88,19 @@
     }
 
     window.addEventListener("DOMContentLoaded", () => {
-  tabs.forEach(btn => {
-    btn.addEventListener("click", () => {
-      const id = btn.dataset.tab;
-      showTab(id);
-      if (id === "liste") renderReservations();
-      if (id === "clients") renderClients();
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+          const id = btn.dataset.tab;
+          showTab(id);
+          if (id === "liste") renderReservations();
+          if (id === "clients") renderClients();
+        });
+      });
+      showTab("form");
     });
-  });
-  showTab("form");
-});
 
     async function saveReservationToSheet(data) {
-      const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations", {
+      const res = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ reservation: data })
@@ -107,42 +108,11 @@
       if (!res.ok) throw new Error("Erreur d'enregistrement");
     }
 
-    async function saveOrUpdateClient(client) {
-      const response = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/fichesclients");
-      const json = await response.json();
-      const existing = json.fichesclients.find(c => c.telephone === client.telephone);
-
-      if (existing) {
-        const updatedClient = { ...existing, reservations: parseInt(existing.reservations || 0) + 1 };
-        const updateRes = await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/fichesclients/${existing.id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fichesclient: updatedClient })
-        });
-        if (!updateRes.ok) throw new Error("Erreur mise à jour fiche client");
-      } else {
-        const createRes = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/fichesclients", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fichesclient: { ...client, reservations: 1 } })
-        });
-        if (!createRes.ok) throw new Error("Erreur création fiche client");
-      }
-    }
-
     document.getElementById("reservationForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const form = e.target;
       const data = Object.fromEntries(new FormData(form).entries());
       data.timestamp = new Date().toLocaleString("fr-CH");
-      const client = {
-        nom: data.nom,
-        prenom: data.prenom,
-        telephone: data.telephone,
-        email: data.email,
-        dob: data.dob,
-        reservations: 1
-      };
 
       document.getElementById("confirmation").classList.remove("hidden");
       document.getElementById("confirmation").innerHTML = `
@@ -163,38 +133,22 @@
 
       document.getElementById("confirmerBtn").addEventListener("click", async () => {
         try {
-          if (currentReservationId) {
-            await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${currentReservationId}`, {
-              method: "PUT",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reservation: data })
-            });
-          } else {
-            await saveReservationToSheet(data);
-          }
-          await saveOrUpdateClient(client);
-
+          await saveReservationToSheet(data);
           document.getElementById("confirmation").classList.add("hidden");
           document.getElementById("success").classList.remove("hidden");
           document.getElementById("success").textContent = "Réservation enregistrée avec succès.";
           form.reset();
-          currentReservationId = null;
         } catch (err) {
           alert("Erreur : " + err.message);
         }
       });
     });
-      async function renderReservations() {
-  fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations")
-    .then(res => res.json())
-    .then(json => {
+
+    async function renderReservations() {
+      const res = await fetch(`${API_URL}?type=reservations`);
+      const json = await res.json();
       const tbody = document.getElementById("reservationTable");
       tbody.innerHTML = "";
-      if (!Array.isArray(json.reservations) || json.reservations.length === 0) {
-        console.warn("Aucune réservation trouvée.");
-        return;
-      }
-      console.log("Données récupérées :", json.reservations);
       json.reservations.forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
@@ -204,44 +158,18 @@
           <td>${r.heure}</td>
           <td>${r.nombre}</td>
           <td>${r.table}</td>
-          <td><button class="edit-res" data-id="${r.id}">Modifier</button> <button class="delete-res" data-id="${r.id}">Supprimer</button></td>
+          <td></td>
         `;
         tbody.appendChild(tr);
       });
-
-      // Ajout listeners suppression
-      document.querySelectorAll(".delete-res").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          if (confirm("Confirmer la suppression ?")) {
-            await fetch(`https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${btn.dataset.id}`, {
-              method: "DELETE"
-            });
-            renderReservations();
-          }
-        });
-      });
-
-      // Ajout listeners édition
-      document.querySelectorAll(".edit-res").forEach(btn => {
-        btn.addEventListener("click", async () => {
-          const item = json.reservations.find(r => r.id == btn.dataset.id);
-          if (!item) return;
-          currentReservationId = item.id;
-          const form = document.getElementById("reservationForm");
-          Object.keys(item).forEach(key => {
-            if (form.elements[key]) form.elements[key].value = item[key];
-          });
-          showTab("form");
-        });
-      });
-    });
-          }
+    }
 
     async function renderClients() {
-      const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/fichesclients");
+      const res = await fetch(`${API_URL}?type=clients`);
       const json = await res.json();
       const container = document.getElementById("clientResults");
       const input = document.getElementById("searchClient");
+
       function display(filtered) {
         container.innerHTML = "";
         filtered.forEach(c => {
@@ -259,6 +187,7 @@
           container.appendChild(div);
         });
       }
+
       display(json.fichesclients);
       input.addEventListener("input", () => {
         const query = input.value.toLowerCase();
