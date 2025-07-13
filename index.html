@@ -190,6 +190,11 @@
     .then(json => {
       const tbody = document.getElementById("reservationTable");
       tbody.innerHTML = "";
+      if (!Array.isArray(json.reservations) || json.reservations.length === 0) {
+        console.warn("Aucune réservation trouvée.");
+        return;
+      }
+      console.log("Données récupérées :", json.reservations);
       json.reservations.forEach(r => {
         const tr = document.createElement("tr");
         tr.innerHTML = `
