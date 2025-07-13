@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Réservation Restaurant</title>
+  <title>Stella Marina</title>
   <style>
     body { font-family: sans-serif; max-width: 800px; margin: auto; padding: 20px; }
     h1, h2 { text-align: center; }
@@ -16,9 +16,6 @@
     input, textarea { width: 100%; padding: 8px; margin-top: 4px; box-sizing: border-box; }
     button.submit { margin-top: 20px; padding: 10px 20px; background-color: black; color: white; border: none; cursor: pointer; }
     .confirmation, .success { margin-top: 20px; padding: 15px; border: 1px solid #ccc; background-color: #f9f9f9; }
-    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    .hidden { display: none; }
   </style>
 </head>
 <body>
@@ -32,49 +29,95 @@
   <section id="form" class="active">
     <h2>Formulaire de réservation</h2>
     <form id="reservationForm">
-      <fieldset style="border: 2px solid #cce5ff; background: #e9f5ff; padding: 15px; margin-bottom: 20px;">
-        <legend style="font-weight: bold; color: #007bff;">Informations du client</legend>
-        <label>Nom* <input type="text" name="nom" required></label>
-        <label>Prénom* <input type="text" name="prenom" required></label>
-        <label>Téléphone* <input type="tel" name="telephone" required></label>
-        <label>Email <input type="email" name="email"></label>
-        <label>Date de naissance <input type="date" name="dob"></label>
-      </fieldset>
-
-      <fieldset style="border: 2px solid #d4edda; background: #f3fdf4; padding: 15px;">
-        <legend style="font-weight: bold; color: #28a745;">Détails de la réservation</legend>
-        <label>Date de réservation* <input type="date" name="date_reservation" required></label>
-        <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
-        <label>Heure de réservation* <input type="time" name="heure" required></label>
-        <label>Table attribuée* <input type="text" name="table" required></label>
-        <label>Allergènes <textarea name="allergenes"></textarea></label>
-        <label>Remarques <textarea name="remarques"></textarea></label>
-      </fieldset>
+      <label>Nom* <input type="text" name="nom" required></label>
+      <label>Prénom* <input type="text" name="prenom" required></label>
+      <label>Téléphone* <input type="tel" name="telephone" required></label>
+      <label>Email <input type="email" name="email"></label>
+      <label>Date de naissance <input type="date" name="dob"></label>
+      <label>Date de réservation* <input type="date" name="date_reservation" required></label>
+      <label>Heure de réservation* <input type="time" name="heure" required></label>
+      <label>Nombre de personnes* <input type="number" name="nombre" required min="1"></label>
+      <label>Table attribuée* <input type="text" name="table" required></label>
+      <label>Allergènes <textarea name="allergenes"></textarea></label>
+      <label>Remarques <textarea name="remarques"></textarea></label>
       <button type="submit" class="submit">Envoyer</button>
     </form>
-    <div id="confirmation" class="confirmation hidden"></div>
-    <div id="success" class="success hidden" style="color:green;"></div>
+    <div id="confirmation" class="confirmation" style="display:none"></div>
+    <div id="success" class="success" style="display:none; color:green;"></div>
   </section>
 
   <section id="liste">
     <h2>Réservations à venir</h2>
-    <table>
-      <thead>
-        <tr><th>Nom</th><th>Téléphone</th><th>Date réservation</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
-      </thead>
-      <tbody id="reservationTable"></tbody>
-    </table>
+    <p>(à intégrer)</p>
   </section>
 
   <section id="clients">
     <h2>Fiches clients</h2>
-    <input type="text" id="searchClient" placeholder="Nom ou téléphone">
-    <div id="clientResults"></div>
+    <p>(à intégrer)</p>
   </section>
 
   <script>
-    const scriptUrl = "https://script.google.com/macros/s/AKfycbzBrmfdqv2-_99SdKoCCAXgFevfdQYBz2byvr8WDMc2Vy1er534goebYmd8NFju_57k/exec";
-    // le reste du script reste inchangé, il doit inclure les appels fetch vers scriptUrl pour les POST
+    document.addEventListener("DOMContentLoaded", () => {
+      const tabs = document.querySelectorAll("nav button");
+      const sections = document.querySelectorAll("section");
+
+      function showTab(id) {
+        sections.forEach(sec => sec.classList.remove("active"));
+        document.getElementById(id).classList.add("active");
+        tabs.forEach(btn => {
+          btn.classList.remove("active");
+          if (btn.dataset.tab === id) btn.classList.add("active");
+        });
+      }
+
+      tabs.forEach(btn => {
+        btn.addEventListener("click", () => {
+          showTab(btn.dataset.tab);
+        });
+      });
+
+      // Réservation
+      document.getElementById("reservationForm").addEventListener("submit", e => {
+        e.preventDefault();
+        const form = e.target;
+        const data = Object.fromEntries(new FormData(form).entries());
+        data.timestamp = new Date().toLocaleString("fr-CH");
+
+        document.getElementById("confirmation").innerHTML = `
+          <p><strong>Confirmer la réservation :</strong></p>
+          <ul>
+            <li>Nom : ${data.prenom} ${data.nom}</li>
+            <li>Téléphone : ${data.telephone}</li>
+            <li>Email : ${data.email || '—'}</li>
+            <li>Date de réservation : ${data.date_reservation}</li>
+            <li>Heure : ${data.heure}</li>
+            <li>Nombre de personnes : ${data.nombre}</li>
+            <li>Table : ${data.table}</li>
+            <li>Allergènes : ${data.allergenes || '—'}</li>
+            <li>Remarques : ${data.remarques || '—'}</li>
+          </ul>
+          <button id="confirmerBtn">Confirmer</button>
+        `;
+        document.getElementById("confirmation").style.display = "block";
+
+        document.getElementById("confirmerBtn").addEventListener("click", async () => {
+          try {
+            const res = await fetch("https://script.google.com/macros/s/AKfycbzBrmfdqv2-_99SdKoCCAXgFevfdQYBz2byvr8WDMc2Vy1er534goebYmd8NFju_57k/exec", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(data)
+            });
+            if (!res.ok) throw new Error("Erreur d'envoi");
+            document.getElementById("confirmation").style.display = "none";
+            document.getElementById("success").style.display = "block";
+            document.getElementById("success").textContent = "Réservation envoyée avec succès.";
+            form.reset();
+          } catch (err) {
+            alert("Erreur : " + err.message);
+          }
+        });
+      });
+    });
   </script>
 </body>
 </html>
