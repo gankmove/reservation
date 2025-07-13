@@ -69,111 +69,134 @@
   </section>
 
   <script>
-    const apiBase = "https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata";
+   <!-- ... gardes ton code actuel jusqu'à l'intérieur du <script> ... -->
+<script>
+let currentReservationId = null; // pour savoir si on modifie ou crée une nouvelle
 
-    document.addEventListener("DOMContentLoaded", () => {
-      const tabs = document.querySelectorAll("nav button");
-      const sections = document.querySelectorAll("section");
+document.addEventListener("DOMContentLoaded", () => {
+  const tabs = document.querySelectorAll("nav button");
+  const sections = document.querySelectorAll("section");
 
-      function showTab(id) {
-        sections.forEach(s => s.classList.remove("active"));
-        document.getElementById(id).classList.add("active");
-        tabs.forEach(btn => btn.classList.toggle("active", btn.dataset.tab === id));
-
-        if (id === "liste") loadReservations();
-        if (id === "clients") loadClients();
-      }
-
-      tabs.forEach(btn => btn.addEventListener("click", () => showTab(btn.dataset.tab)));
-
-      // Formulaire de réservation
-      document.getElementById("reservationForm").addEventListener("submit", e => {
-        e.preventDefault();
-        const form = e.target;
-        const data = Object.fromEntries(new FormData(form).entries());
-        data.timestamp = new Date().toLocaleString("fr-CH");
-
-        document.getElementById("confirmation").innerHTML = `
-          <p><strong>Confirmer la réservation :</strong></p>
-          <ul>
-            <li>Nom : ${data.prenom} ${data.nom}</li>
-            <li>Téléphone : ${data.telephone}</li>
-            <li>Email : ${data.email || '—'}</li>
-            <li>Date de réservation : ${data.date_reservation}</li>
-            <li>Heure : ${data.heure}</li>
-            <li>Nombre de personnes : ${data.nombre}</li>
-            <li>Table : ${data.table}</li>
-            <li>Allergènes : ${data.allergenes || '—'}</li>
-            <li>Remarques : ${data.remarques || '—'}</li>
-          </ul>
-          <button id="confirmerBtn">Confirmer</button>
-        `;
-        document.getElementById("confirmation").style.display = "block";
-
-        document.getElementById("confirmerBtn").addEventListener("click", async () => {
-          try {
-            const res = await fetch(`${apiBase}/reservations`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ reservation: data })
-            });
-            if (!res.ok) throw new Error("Erreur d'envoi");
-            document.getElementById("confirmation").style.display = "none";
-            document.getElementById("success").style.display = "block";
-            document.getElementById("success").textContent = "Réservation envoyée avec succès.";
-            form.reset();
-          } catch (err) {
-            alert("Erreur : " + err.message);
-          }
-        });
-      });
-
-      // Liste des réservations
-      async function loadReservations() {
-        const tbody = document.getElementById("reservationTable");
-        tbody.innerHTML = "Chargement...";
-        const res = await fetch(`${apiBase}/reservations`);
-        const data = await res.json();
-        tbody.innerHTML = "";
-        data.reservations.forEach(r => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${r.nom} ${r.prenom}</td><td>${r.telephone}</td><td>${r.date_reservation}</td><td>${r.heure}</td>
-            <td><button onclick="deleteReservation(${r.id})">Supprimer</button></td>`;
-          tbody.appendChild(tr);
-        });
-      }
-
-      // Liste des clients
-      async function loadClients() {
-        const tbody = document.getElementById("clientTable");
-        tbody.innerHTML = "Chargement...";
-        const res = await fetch(`${apiBase}/fichesclients`);
-        const data = await res.json();
-        tbody.innerHTML = "";
-        data.fichesclients.forEach(c => {
-          const tr = document.createElement("tr");
-          tr.innerHTML = `<td>${c.prenom} ${c.nom}</td><td>${c.telephone}</td><td>${c.email}</td><td>${c.reservations}</td>
-            <td><button onclick="deleteClient(${c.id})">Supprimer</button></td>`;
-          tbody.appendChild(tr);
-        });
-      }
-
-      window.deleteReservation = async function(id) {
-        if (confirm("Supprimer cette réservation ?")) {
-          await fetch(`${apiBase}/reservations/${id}`, { method: "DELETE" });
-          loadReservations();
-        }
-      }
-
-      window.deleteClient = async function(id) {
-        if (confirm("Supprimer cette fiche client ?")) {
-          await fetch(`${apiBase}/fichesclients/${id}`, { method: "DELETE" });
-          loadClients();
-        }
-      }
-
-      showTab("form");
+  function showTab(id) {
+    sections.forEach(sec => sec.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+    tabs.forEach(btn => {
+      btn.classList.remove("active");
+      if (btn.dataset.tab === id) btn.classList.add("active");
     });
+  }
+
+  tabs.forEach(btn => {
+    btn.addEventListener("click", () => {
+      showTab(btn.dataset.tab);
+    });
+  });
+
+  document.getElementById("reservationForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const form = e.target;
+    const data = Object.fromEntries(new FormData(form).entries());
+    data.timestamp = new Date().toLocaleString("fr-CH");
+
+    document.getElementById("confirmation").innerHTML = `
+      <p><strong>Confirmer la réservation :</strong></p>
+      <ul>
+        <li>Nom : ${data.prenom} ${data.nom}</li>
+        <li>Téléphone : ${data.telephone}</li>
+        <li>Email : ${data.email || '—'}</li>
+        <li>Date de réservation : ${data.date_reservation}</li>
+        <li>Heure : ${data.heure}</li>
+        <li>Nombre de personnes : ${data.nombre}</li>
+        <li>Table : ${data.table}</li>
+        <li>Allergènes : ${data.allergenes || '—'}</li>
+        <li>Remarques : ${data.remarques || '—'}</li>
+      </ul>
+      <button id="confirmerBtn">Confirmer</button>
+    `;
+    document.getElementById("confirmation").style.display = "block";
+
+    document.getElementById("confirmerBtn").addEventListener("click", async () => {
+      try {
+        const url = currentReservationId
+          ? `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations/${currentReservationId}`
+          : `https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations`;
+
+        const method = currentReservationId ? "PUT" : "POST";
+
+        const res = await fetch(url, {
+          method: method,
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reservation: data })
+        });
+
+        if (!res.ok) throw new Error("Erreur lors de l'envoi");
+
+        document.getElementById("confirmation").style.display = "none";
+        document.getElementById("success").style.display = "block";
+        document.getElementById("success").textContent = "Réservation enregistrée avec succès.";
+        form.reset();
+        currentReservationId = null;
+      } catch (err) {
+        alert("Erreur : " + err.message);
+      }
+    });
+  });
+
+  // Exemple simple de tableau des réservations avec bouton Modifier
+  if (document.getElementById("liste")) {
+    document.querySelector("button[data-tab='liste']").addEventListener("click", loadReservations);
+  }
+
+  async function loadReservations() {
+    const res = await fetch("https://api.sheety.co/72884d05d7bfb11aaabc6c21da9be3e9/restaurantdata/reservations");
+    const json = await res.json();
+    const tbody = document.getElementById("liste").querySelector("table tbody") || document.createElement("tbody");
+
+    tbody.innerHTML = "";
+    json.reservations.forEach(r => {
+      const tr = document.createElement("tr");
+      tr.innerHTML = `
+        <td>${r.nom} ${r.prenom}</td>
+        <td>${r.telephone}</td>
+        <td>${r.date_reservation}</td>
+        <td>${r.heure}</td>
+        <td>${r.nombre}</td>
+        <td>${r.table}</td>
+        <td><button class="edit-btn" data-id="${r.id}">Modifier</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    tbody.querySelectorAll(".edit-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        const resData = json.reservations.find(r => r.id == id);
+        if (!resData) return;
+        const form = document.getElementById("reservationForm");
+        for (const key in resData) {
+          if (form.elements[key]) {
+            form.elements[key].value = resData[key];
+          }
+        }
+        currentReservationId = id;
+        showTab("form");
+      });
+    });
+
+    // Si pas encore de <table>, crée une
+    if (!document.getElementById("liste").querySelector("table")) {
+      const table = document.createElement("table");
+      table.innerHTML = `
+        <thead>
+          <tr><th>Nom</th><th>Téléphone</th><th>Date</th><th>Heure</th><th>Personnes</th><th>Table</th><th>Actions</th></tr>
+        </thead>
+      `;
+      table.appendChild(tbody);
+      document.getElementById("liste").appendChild(table);
+    }
+  }
+});
+</script>
   </script>
 </body>
 </html>
