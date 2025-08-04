@@ -37,7 +37,104 @@
     table { width: 100%; border-collapse: collapse; margin-top: 20px; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
     button.edit, button.delete, button.delete-client { background: none; border: none; color: blue; cursor: pointer; padding: 4px 8px; }
-  </style>
+  
+.confirmation {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 500px;
+  background: white;
+  border: 2px solid #000;
+  padding: 20px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+}
+.confirmation-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.4);
+  z-index: 999;
+  display: none;
+}
+
+
+/* Responsive global layout */
+@media (max-width: 600px) {
+  body {
+    padding: 10px;
+  }
+  input, textarea {
+    font-size: 16px;
+  }
+  .client-section, .reservation-section {
+    padding: 10px;
+  }
+  nav {
+    flex-direction: column;
+  }
+  nav button {
+    width: 100%;
+  }
+  table {
+    font-size: 14px;
+  }
+  th, td {
+    padding: 6px;
+  }
+}
+
+/* Responsive confirmation box */
+.confirmation {
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 8px;
+}
+
+.confirmation button {
+  display: block;
+  margin: 20px auto 0;
+  padding: 10px 20px;
+  background-color: black;
+  color: white;
+  border: none;
+  cursor: pointer;
+}
+
+
+.success {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 1000;
+  background: #d1fae5;
+  padding: 20px;
+  border: 2px solid #047857;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  max-width: 90%;
+  width: 400px;
+  text-align: center;
+  border-radius: 8px;
+}
+
+/* Overlay for success messages */
+.success-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.3);
+  z-index: 999;
+  display: none;
+}
+
+</style>
 </head>
 <body>
   <h1>Stella Marina</h1>
@@ -72,8 +169,10 @@
       </div>
 <button type="submit" class="submit">Envoyer</button>
     </form>
+<div class="confirmation-overlay" id="confirmationOverlay"></div>
     <div id="confirmation" class="confirmation" style="display:none"></div>
-    <div id="success" class="success" style="display:none; color:green;"></div>
+    <div id="successOverlay" class="success-overlay"></div>
+<div id="success" class="success" style="display:none; color:green;"></div>
   </section>
 
   <section id="liste">
@@ -145,6 +244,21 @@
 
     document.addEventListener("DOMContentLoaded", () => {
 
+        // Success overlay click to close
+        document.getElementById("successOverlay").addEventListener("click", () => {
+          document.getElementById("successOverlay").style.display = "none";
+        document.getElementById("success").style.display = "none";
+          document.getElementById("successOverlay").style.display = "none";
+        });
+
+
+document.getElementById("confirmationOverlay").addEventListener("click", () => {
+  document.getElementById("confirmation").style.display = "none";
+document.getElementById("confirmationOverlay").style.display = "none";
+  document.getElementById("confirmationOverlay").style.display = "none";
+});
+
+
       // Remplir la datalist avec les noms connus
       async function remplirSuggestionsClients() {
         try {
@@ -205,7 +319,8 @@
           </ul>
           <button id="confirmerBtn">Confirmer</button>
         `;
-        document.getElementById("confirmation").style.display = "block";
+        document.getElementById("confirmationOverlay").style.display = "block";
+document.getElementById("confirmation").style.display = "block";
 
         document.getElementById("confirmerBtn").addEventListener("click", async () => {
           try {
@@ -230,7 +345,9 @@
             }
 
             document.getElementById("confirmation").style.display = "none";
-            document.getElementById("success").style.display = "block";
+document.getElementById("confirmationOverlay").style.display = "none";
+            document.getElementById("successOverlay").style.display = "block";
+        document.getElementById("success").style.display = "block";
             document.getElementById("success").textContent = isEditing
               ? "Réservation mise à jour avec succès."
               : "Réservation envoyée avec succès.";
